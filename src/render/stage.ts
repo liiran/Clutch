@@ -4,6 +4,7 @@
 
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { SIZE } from '../core/model.ts'
 import { COLOR } from '../core/colors.ts'
 import { plainBox } from './geometry.ts'
@@ -11,6 +12,9 @@ import { MAX_LEVEL, STARTING_LEVEL, pixelRatioFor, saveLevel, shadowsFor } from 
 
 const BACKGROUND = 0x1d1f24
 const OFF = SIZE / 2
+const PLATE_THICK = 0.8   // the baseplate's own thickness
+const STEP_1 = 1.5, STEP_2 = 2.6 // how far down the podium's two steps reach
+const FLOOR_Y = -STEP_2
 const SHADOW_EVERY = 66 // ms between shadow redraws while pieces are moving
 
 export type Ticker = (time: number) => void
@@ -45,6 +49,31 @@ function studTexture(renderer: THREE.WebGLRenderer): THREE.CanvasTexture {
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping
   texture.repeat.set(SIZE, SIZE)
   texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy())
+  return texture
+}
+
+// The floor under the podium: a faint pool of light and a soft shadow, fading to nothing,
+// so the plate sits on something instead of floating in the dark.
+function floorTexture(): THREE.CanvasTexture {
+  const size = 256
+  const paint = document.createElement('canvas')
+  paint.width = paint.height = size
+  const g = paint.getContext('2d')!
+  const mid = size / 2
+  const pool = g.createRadialGradient(mid, mid, size * 0.2, mid, mid, mid)
+  pool.addColorStop(0, 'rgba(255,255,255,0.05)')
+  pool.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = pool
+  g.fillRect(0, 0, size, size)
+  // A blurred dark square, drawn off the canvas so only its shadow lands on it.
+  const away = size * 2, side = size * 0.46
+  g.shadowColor = 'rgba(0,0,0,0.5)'
+  g.shadowBlur = 22
+  g.shadowOffsetX = away
+  g.fillStyle = '#000'
+  g.fillRect(mid - side / 2 - away, mid - side / 2, side, side)
+  const texture = new THREE.CanvasTexture(paint)
+  texture.colorSpace = THREE.SRGBColorSpace
   return texture
 }
 
@@ -126,11 +155,24 @@ export class Stage {
   }
 
   private addBaseplate() {
-    const slab = new THREE.Mesh(plainBox(-OFF, OFF, -0.2, -0.004, -OFF, OFF, 0.05), this.plateSide)
+    const slab = new THREE.Mesh(plainBox(-OFF, OFF, -PLATE_THICK, -0.004, -OFF, OFF, 0.08), this.plateSide)
     const top = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), this.plateTop)
     top.rotation.x = -Math.PI / 2
     top.receiveShadow = true
-    this.scene.add(slab, top)
+    // Two wider dark steps underneath, like a display stand.
+    const inner = OFF + 1, outer = OFF + 2.4
+    const steps = new THREE.Mesh(mergeGeometries([
+      plainBox(-inner, inner, -STEP_1, -PLATE_THICK, -inner, inner, 0.08),
+      plainBox(-outer, outer, -STEP_2, -STEP_1, -outer, outer, 0.1),
+    ])!, new THREE.MeshLambertMaterial({ color: 0x34373e }))
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(SIZE * 3.6, SIZE * 3.6),
+      new THREE.MeshBasicMaterial({ map: floorTexture(), transparent: true, depthWrite: false }),
+    )
+    floor.rotation.x = -Math.PI / 2
+    floor.position.y = FLOOR_Y - 0.01
+    floor.renderOrder = -1
+    this.scene.add(floor, steps, slab, top)
   }
 
   setBaseplateColor(id: string) {
@@ -256,7 +298,7 @@ export class Stage {
 
   // The view that shows the whole baseplate for the canvas's current shape.
   defaultView(aspect = this.camera.aspect) {
-    return this.fitBox(new THREE.Box3(new THREE.Vector3(-OFF, -0.2, -OFF), new THREE.Vector3(OFF, 1, OFF)), aspect, 0.94)
+    return this.fitBox(new THREE.Box3(new THREE.Vector3(-OFF - 2.4, -STEP_2, -OFF - 2.4), new THREE.Vector3(OFF + 2.4, 1, OFF + 2.4)), aspect, 0.94)
   }
 
   // Backs a camera away along the editor's three-quarter angle until the box fits.
