@@ -31,6 +31,8 @@ Type what you want. Your request shows up as a see-through preview, so nothing c
   <img src="docs/media/preview.png" alt="A translucent preview of a white house with a red roof on a green baseplate. The chat panel on the right shows the request, the reply, a green Checked card reading all attached, nothing overlapping, and a bar with Discard and Apply buttons." width="760">
 </p>
 
+Don't like where it landed? Drag the preview anywhere on the baseplate, press R to turn it, or nudge it with the arrow keys. It stays on the plate, turns red where it doesn't fit, and can only be applied where it does.
+
 Before you see a preview, every piece is checked: nothing can overlap, and every piece has to connect through studs back to the baseplate. If there is a problem, the model gets exactly one chance to fix it. The green card tells you how it went, and a yellow one says what is still wrong.
 
 Then keep going. The chat always sees the current build, so you can add to it, change colours or take things away.
@@ -58,6 +60,7 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 | Esc | Stop, or deselect |
 | F | Frame the build |
 | Ctrl+Z, Ctrl+Y | Undo, redo |
+| Drag a preview | Move a chat build before applying it (R turns it, arrow keys nudge it) |
 | ? | Show these in the app |
 
 ## Watch it go together

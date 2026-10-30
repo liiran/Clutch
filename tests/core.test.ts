@@ -9,6 +9,7 @@ import { planSteps, countParts } from '../src/core/steps.ts'
 import { fromFile, toFile } from '../src/core/file.ts'
 import { describeBuild } from '../src/core/describe.ts'
 import { alignTo, holdStud } from '../src/core/snap.ts'
+import { Placing, turnModel } from '../src/core/placing.ts'
 import { CAR_RADIUS, floorAt, isResting, newCar, speedOf, stepCar, type World } from '../src/core/drive.ts'
 import type { Brick } from '../src/core/model.ts'
 
@@ -305,6 +306,76 @@ test('a build saved on the old 48 stud plate moves to the middle of the new one'
   const saved = toFile('New', 'green', old.bricks)
   assert.equal(saved.version, 2)
   assert.deepEqual(fromFile(saved).bricks.map((b) => [b.x, b.z]), [[8, 8], [55, 55]], 'and only once')
+})
+
+test('a proposal moves as one piece, and stops at the edges of the plate', () => {
+  const added = [brick(10, 'brick_2x4', 20, 0, 20), brick(11, 'brick_2x2', 20, 3, 20)]
+  const placing = new Placing([], added)
+  assert.equal(placing.fits, true)
+  assert.equal(placing.moveTo(5, -3), true)
+  assert.deepEqual(placing.current.map((b) => [b.id, b.x, b.y, b.z]), [[10, 25, 0, 17], [11, 25, 3, 17]])
+  assert.equal(placing.moveTo(5, -3), false, 'nothing changed')
+  placing.moveTo(1000, 1000)
+  assert.deepEqual([placing.current[0].x, placing.current[0].z], [62, 60], 'stopped at the far corner')
+  placing.moveTo(-1000, -1000)
+  assert.deepEqual([placing.current[0].x, placing.current[0].z], [0, 0], 'stopped at the near corner')
+  assert.equal(new Placing([], []).fits, true)
+})
+
+test('a moved proposal is blocked where it overlaps, and clear where it does not', () => {
+  const base = [brick(1, 'brick_2x4', 30, 0, 20)]
+  const placing = new Placing(base, [brick(10, 'brick_2x4', 20, 0, 20), brick(11, 'brick_2x2', 20, 3, 20)])
+  placing.moveTo(10, 0)
+  assert.equal(placing.fits, false)
+  assert.equal(placing.overlapping, 1, 'only the bottom piece hits it')
+  placing.moveTo(13, 0)
+  assert.equal(placing.fits, true)
+  assert.equal(placing.overlapping, 0)
+})
+
+test('moving a proposal off what it sat on brings it down, and reports what would float', () => {
+  const base = [brick(1, 'brick_2x4', 20, 0, 20)]
+  const chimney = [brick(10, 'brick_1x1', 20, 3, 20)]
+  const placing = new Placing(base, chimney)
+  assert.equal(placing.floating, 0)
+  placing.moveTo(10, 0)
+  assert.equal(placing.current[0].y, 0, 'down onto the plate')
+  assert.equal(placing.floating, 0)
+  placing.moveTo(0, 0)
+  assert.equal(placing.current[0].y, 3, 'and back on top of the brick')
+  // Sitting on a tile, it is held up but has no stud to grip.
+  const tiled = new Placing([brick(1, 'tile_2x2', 40, 0, 40)], [brick(10, 'brick_1x1', 20, 1, 20)])
+  tiled.moveTo(20, 20)
+  assert.equal(tiled.current[0].y, 1)
+  assert.equal(tiled.floating, 1)
+})
+
+test('pieces already loose do not count against a moved proposal', () => {
+  const placing = new Placing([brick(1, 'brick_1x1', 5, 30, 5)], [brick(10, 'brick_2x2', 20, 0, 20)])
+  placing.moveTo(3, 3)
+  assert.equal(placing.floating, 0)
+})
+
+test('turning a proposal keeps its shape, and four turns come back', () => {
+  const added = [brick(10, 'brick_2x4', 20, 0, 20), brick(11, 'slope_1x2', 22, 0, 20, 1), brick(12, 'brick_1x1', 20, 3, 23)]
+  const once = turnModel(added)
+  assert.deepEqual(once.map((b) => b.rot), [1, 2, 1])
+  const grid = new Grid(once)
+  assert.equal(grid.bricks.size, 3)
+  assert.deepEqual(new Grid(added).loose(), new Grid(once).loose())
+  // A cell of the original lands where the turn says it should.
+  const cellsOf = (list: Brick[]) => list.flatMap((b) => PART.get(b.part)!.rots[b.rot].solid.map(([x, z, l]) => `${b.x + x},${b.y + l},${b.z + z}`)).sort()
+  assert.equal(new Set(cellsOf(once)).size, cellsOf(added).length, 'no two cells collapse together')
+  let back: Brick[] = added
+  for (let i = 0; i < 4; i++) back = turnModel(back)
+  assert.deepEqual(back, added)
+  const placing = new Placing([], added)
+  placing.moveTo(40, 0)
+  placing.turn()
+  assert.equal(placing.fits, true)
+  const near = new Placing([], [brick(10, 'brick_2x8', 0, 0, 0, 1)])
+  near.turn()
+  assert.ok(near.current.every((b) => b.x >= 0 && b.z >= 0), 'a turn at the edge stays on the plate')
 })
 
 const flat: World = { boxes: [], ramps: [], bound: 30 }

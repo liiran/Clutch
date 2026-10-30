@@ -237,6 +237,88 @@ test('Enter applies a preview and Escape discards it', async () => {
   assert.equal((await state()).count, 1)
 })
 
+test('a proposal can be dragged, turned and nudged, and lands where it was put', async () => {
+  await reset()
+  await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 45, y: 0, z: 30, rot: 0 }], 'load'))
+  await page.evaluate(() => (window as any).clutch.chat.preview([{ tool: 'fill', x1: 20, z1: 30, x2: 25, z2: 33, y: 0, height: 3, color: 'blue' }]))
+  await wait(1000) // the camera glides to frame it
+  const camera = await page.evaluate(() => (window as any).clutch.stage.camera.position.toArray())
+  const before = await page.evaluate(() => (window as any).clutch.chat.mover.placing.current[0])
+
+  // Drag it from its top, ten studs to the right.
+  const from = await screenOf(22, 31, 3)
+  const to = await screenOf(32, 31, 3)
+  await page.mouse.move(from.x, from.y)
+  await wait(30)
+  assert.equal(await page.$eval('#canvas', (el) => (el as HTMLElement).style.cursor), 'grab')
+  await page.mouse.down()
+  await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 6 })
+  await page.mouse.move(to.x, to.y, { steps: 6 })
+  await page.mouse.up()
+  const moved = await page.evaluate(() => (window as any).clutch.chat.mover.placing.current[0])
+  assert.ok(Math.abs(moved.x - before.x - 10) <= 1, `it moved about ten studs: ${moved.x - before.x}`)
+  assert.deepEqual(await page.evaluate(() => (window as any).clutch.stage.camera.position.toArray()), camera, 'dragging it did not orbit the camera')
+  assert.equal((await state()).count, 1, 'nothing is built yet')
+
+  // Onto the existing brick: red, and it cannot be applied.
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur())
+  for (let i = 0; i < 12; i++) await page.keyboard.press('ArrowRight')
+  assert.equal(await page.evaluate(() => (window as any).clutch.chat.mover.placing.fits), false)
+  assert.match(await page.$eval('#chat-pending-count', (el) => el.textContent ?? ''), /Doesn't fit/)
+  assert.equal(await page.$eval('#chat-accept', (el) => (el as HTMLButtonElement).disabled), true)
+  await wait(600)
+  const inView = await page.evaluate(() => {
+    const { stage, view, chat } = (window as any).clutch
+    const box = view.boundsOf(chat.mover.placing.current)
+    return stage.canSee([box.min, box.max])
+  })
+  assert.equal(inView, true, 'nudging it keeps it on screen')
+  await shot(page, 'proposal-blocked')
+  await page.keyboard.press('Enter')
+  assert.equal((await state()).previewing, true, 'Enter does nothing while it does not fit')
+
+  // Clear again, and turned.
+  for (let i = 0; i < 14; i++) await page.keyboard.press('ArrowLeft')
+  assert.equal(await page.evaluate(() => (window as any).clutch.chat.mover.placing.fits), true)
+  assert.match(await page.$eval('#chat-pending-count', (el) => el.textContent ?? ''), /new piece/)
+  assert.equal(await page.$eval('#chat-accept', (el) => (el as HTMLButtonElement).disabled), false)
+  await page.keyboard.press('r')
+  await shot(page, 'proposal-moved')
+  const final = await page.evaluate(() => (window as any).clutch.chat.mover.placing.current)
+  await page.click('#chat-accept')
+  const s = await state()
+  assert.equal(s.count, final.length + 1)
+  for (const brick of final) {
+    const placed = s.bricks.find((b) => b.id === brick.id)!
+    assert.deepEqual([placed.x, placed.y, placed.z, placed.rot], [brick.x, brick.y, brick.z, brick.rot])
+  }
+  await page.keyboard.down('Control'); await page.keyboard.press('z'); await page.keyboard.up('Control')
+  assert.equal((await state()).count, 1, 'one undo takes it all back')
+})
+
+test('dragging away from a proposal still orbits, and an edit-only proposal has nothing to move', async () => {
+  await reset()
+  await page.evaluate(() => (window as any).clutch.chat.preview([{ tool: 'fill', x1: 40, z1: 40, x2: 45, z2: 43, y: 0, height: 3, color: 'blue' }]))
+  await wait(1000)
+  const camera = await page.evaluate(() => (window as any).clutch.stage.camera.position.toArray())
+  const at = await screenOf(42, 41)
+  await page.mouse.move(at.x - 220, at.y)
+  await page.mouse.down()
+  await page.mouse.move(at.x - 140, at.y, { steps: 6 })
+  await page.mouse.up()
+  await wait(100)
+  assert.notDeepEqual(await page.evaluate(() => (window as any).clutch.stage.camera.position.toArray()), camera)
+  await page.click('#chat-decline')
+  await page.evaluate(() => {
+    const { store, chat } = (window as any).clutch
+    store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 20, y: 0, z: 20, rot: 0 }], 'load')
+    chat.preview([{ tool: 'recolor', ids: [1], color: 'blue' }])
+  })
+  assert.equal(await page.evaluate(() => (window as any).clutch.chat.mover.placing), null)
+  await page.click('#chat-accept')
+  assert.equal((await state()).bricks[0].color, 'blue')
+})
+
 test('an edit proposal tints what goes and shows what changes', async () => {
   await reset()
   await page.evaluate(() => {

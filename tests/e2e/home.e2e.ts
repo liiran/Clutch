@@ -66,9 +66,8 @@ test('the car drives with WASD, shows its legend, and draws nothing when parked'
   assert.ok(moved.z > -9 + 1.4, `it bounced off the title, not through it: ${moved.z}`)
   assert.ok(Math.hypot(moved.x - start.x, moved.z - start.z) > 2, 'it moved')
   await hold('s', 300)
-  await wait(2500)
-  const parked = await car()
-  assert.equal(parked.ticking, false, 'it stops running once parked')
+  await page.waitForFunction(() => !(window as any).clutchHome.car.ticking, { timeout: 10000 })
+  await wait(100)
   const frames = await page.evaluate(async () => {
     const render = (window as any).clutch.stage.renderer.info.render
     const before = render.frame

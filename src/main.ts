@@ -30,7 +30,7 @@ const dock = new Dock(tools, store)
 const replay = new Replay(stage, store, view)
 const partsView = new PartsView(store)
 const projects = new Projects(store, stage)
-const chat = new Chat(store, view, tools)
+const chat = new Chat(store, view, tools, stage)
 
 // ── Hints and labels ───────────────────────────────────────────
 const hintBox = $('hint')
@@ -50,6 +50,7 @@ function setHint(text: string, ms?: number) {
   }
 }
 tools.onHint = setHint
+chat.onHint = setHint
 projects.onHint = setHint
 
 const label = $('where')

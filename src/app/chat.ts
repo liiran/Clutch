@@ -8,6 +8,8 @@ import { escapeHtml, icon } from './icons.ts'
 import type { Store } from './store.ts'
 import type { Tools } from './tools.ts'
 import type { View } from './view.ts'
+import { Mover } from './mover.ts'
+import type { Stage } from '../render/stage.ts'
 
 interface ChatReply {
   reply: string
@@ -45,22 +47,27 @@ export class Chat {
   private view: View
   private tools: Tools
   private history: Array<{ role: 'user' | 'model'; text: string }> = []
-  private pending: { result: ApplyResult; revision: number } | null = null
+  private pending: { result: ApplyResult; revision: number; base: Brick[] } | null = null
+  private mover: Mover
   private controller: AbortController | null = null
   private messages = document.getElementById('chat-messages')!
   private welcome = document.getElementById('chat-welcome')!
   private input = document.getElementById('chat-input') as HTMLTextAreaElement
   private send = document.getElementById('chat-send') as HTMLButtonElement
   private bar = document.getElementById('chat-pending')!
+  private accepting = document.getElementById('chat-accept') as HTMLButtonElement
   private barCount = document.getElementById('chat-pending-count')!
   onPreviewChange: (open: boolean) => void = () => {}
   onAsk: () => void = () => {}
   onBeforePreview: () => void = () => {}
+  onHint: (text: string, ms?: number) => void = () => {}
 
-  constructor(store: Store, view: View, tools: Tools) {
+  constructor(store: Store, view: View, tools: Tools, stage: Stage) {
     this.store = store
     this.view = view
     this.tools = tools
+    this.mover = new Mover(stage, view)
+    this.mover.onChange = () => this.refreshBar()
     this.input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault()
@@ -221,22 +228,42 @@ export class Chat {
     this.addVerdict(verdictFor(result), attempts)
     if (!changes) return
     this.onBeforePreview()
-    this.pending = { result, revision: this.store.revision }
+    const added = new Set(result.added.map((brick) => brick.id))
+    const base = result.bricks.filter((brick) => !added.has(brick.id))
+    this.pending = { result, revision: this.store.revision, base }
     this.tools.setLocked(true)
     this.view.showProposal(result)
     this.view.reveal([...result.added, ...result.changed])
-    const parts: string[] = []
-    if (result.added.length) parts.push(`${plural(result.added.length, 'new piece')}`)
-    if (result.changed.length) parts.push(`${result.changed.length} changed`)
-    if (result.removed.length) parts.push(`${result.removed.length} removed`)
-    this.barCount.textContent = parts.join(', ')
+    this.mover.begin(base, result.added)
+    this.refreshBar()
     this.bar.hidden = false
     this.onPreviewChange(true)
+    if (result.added.length) this.onHint('Drag the preview to move it · R turns it')
+  }
+
+  private refreshBar() {
+    if (!this.pending) return
+    const { result } = this.pending
+    const placing = this.mover.placing
+    const parts: string[] = []
+    if (result.added.length) parts.push(plural(result.added.length, 'new piece'))
+    if (result.changed.length) parts.push(`${result.changed.length} changed`)
+    if (result.removed.length) parts.push(`${result.removed.length} removed`)
+    const blocked = placing !== null && !placing.fits
+    // Only a move can make these worse; a proposal's own problems are already on its card.
+    const floating = placing !== null && !blocked && placing.floating > result.loose.length
+    this.barCount.textContent = blocked ? "Doesn't fit here. Move it."
+      : floating ? `${plural(placing.floating, 'piece')} won't be attached here`
+      : parts.join(', ')
+    this.bar.classList.toggle('is-blocked', blocked)
+    this.bar.classList.toggle('is-warning', floating)
+    this.accepting.disabled = blocked
   }
 
   private closePreview() {
     if (!this.pending) return
     this.pending = null
+    this.mover.end()
     this.view.clearProposal()
     this.bar.hidden = true
     this.tools.setLocked(false)
@@ -245,13 +272,16 @@ export class Chat {
 
   accept() {
     if (!this.pending) return
-    const { result, revision } = this.pending
+    const { result, revision, base } = this.pending
+    const placing = this.mover.placing
+    if (placing && !placing.fits) return
+    const bricks = placing ? [...base, ...placing.current] : result.bricks
     this.closePreview()
     if (revision !== this.store.revision) {
       this.addMessage('The build changed, so this preview is out of date. Ask again for a new one.', 'system')
       return
     }
-    this.store.commit(result.bricks, 'chat')
+    this.store.commit(bricks, 'chat')
     this.addMessage(`Applied. ${plural(this.store.count, 'piece')} on the plate.`, 'system')
   }
 

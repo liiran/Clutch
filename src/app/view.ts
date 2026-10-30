@@ -15,6 +15,7 @@ import type { Change, Store } from './store.ts'
 
 const OFF = SIZE / 2
 const FALL = 0.72
+const MIN_VIEW = 36 // the least of the plate, in studs, shown around a build
 
 // Height above rest for a piece partway through its drop: a fall, then a small hop.
 const dropHeight = (k: number, lift: number) => k < FALL
@@ -42,6 +43,8 @@ export class View {
   private cursorTicking = false
   private preview: BrickLayer
   private previewMaterials = ghostMaterials(0.55)
+  private previewFixed: BrickLayer
+  private fixedMaterials = ghostMaterials(0.55)
   private previewTint: number[] = []
   private previewHidden: Brick[] = []
   private breathe: ((time: number) => void) | null = null
@@ -59,7 +62,8 @@ export class View {
     const redraw = () => stage.invalidate()
     this.cursor = new BrickLayer(this.cursorMaterials.set, false, redraw)
     this.preview = new BrickLayer(this.previewMaterials.set, false, redraw)
-    stage.scene.add(this.cursor.group, this.preview.group)
+    this.previewFixed = new BrickLayer(this.fixedMaterials.set, false, redraw)
+    stage.scene.add(this.cursor.group, this.preview.group, this.previewFixed.group)
 
     this.frame = new THREE.InstancedMesh(
       new THREE.BoxGeometry(1, 1, 1),
@@ -183,6 +187,7 @@ export class View {
   setOverlaysVisible(show: boolean) {
     this.cursor.group.visible = show
     this.preview.group.visible = show
+    this.previewFixed.group.visible = show
     this.frame.visible = show && Boolean(this.frameBrick)
   }
 
@@ -236,7 +241,8 @@ export class View {
   // ── Chat preview ─────────────────────────────────────────────
   showProposal(result: ApplyResult) {
     this.clearProposal()
-    for (const brick of [...result.added, ...result.changed]) this.preview.add(brick)
+    for (const brick of result.added) this.preview.add(brick)
+    for (const brick of result.changed) this.previewFixed.add(brick)
     for (const brick of result.removed) {
       this.layer.setTint(brick.id, RED_TINT)
       this.previewTint.push(brick.id)
@@ -251,7 +257,7 @@ export class View {
     }
     if (!this.stage.reducedMotion) {
       this.breathe = (time) => {
-        this.previewMaterials.ghost.opacity = 0.5 + 0.1 * Math.sin(time * 3.2)
+        this.previewMaterials.ghost.opacity = this.fixedMaterials.ghost.opacity = 0.5 + 0.1 * Math.sin(time * 3.2)
       }
       this.stage.addTicker(this.breathe)
     }
@@ -264,10 +270,31 @@ export class View {
       this.breathe = null
     }
     this.preview.clear()
+    this.previewFixed.clear()
+    this.preview.group.position.set(0, 0, 0)
+    this.setProposalState(true)
     for (const id of this.previewTint) this.layer.setTint(id, null)
     for (const brick of this.previewHidden) this.show(brick.id)
     this.previewTint = []
     this.previewHidden = []
+    this.stage.invalidate()
+  }
+
+  // The moving part of a proposal: the model's shape, where it is, and whether it fits there.
+  setProposalModel(bricks: readonly Brick[]) {
+    this.preview.clear()
+    for (const brick of bricks) this.preview.add(brick)
+  }
+
+  moveProposal(dx: number, dy: number, dz: number) {
+    this.preview.group.position.set(dx, dy * PLATE_H, dz)
+    this.stage.invalidate()
+  }
+
+  setProposalState(fits: boolean) {
+    const ghost = this.previewMaterials.ghost
+    ghost.emissive.setHex(fits ? 0x000000 : 0xff2a1a)
+    ghost.emissiveIntensity = fits ? 0 : 0.75
     this.stage.invalidate()
   }
 
@@ -314,16 +341,22 @@ export class View {
     return box
   }
 
-  // Moves the camera only if these pieces are not all in view already.
-  reveal(bricks: readonly Brick[]) {
+  // Brings these pieces into view. A small build still gets some plate around it, so there
+  // is room to see where it could go. With onlyIfHidden, a zoomed out camera is left alone.
+  reveal(bricks: readonly Brick[], onlyIfHidden = false) {
     if (!bricks.length) return
     const box = this.boundsOf(bricks)
+    const center = box.getCenter(new THREE.Vector3())
+    for (const axis of ['x', 'z'] as const) {
+      box.min[axis] = Math.min(box.min[axis], center[axis] - MIN_VIEW / 2)
+      box.max[axis] = Math.max(box.max[axis], center[axis] + MIN_VIEW / 2)
+    }
     const corners: THREE.Vector3[] = []
     for (let k = 0; k < 8; k++) corners.push(new THREE.Vector3(k & 1 ? box.max.x : box.min.x, k & 2 ? box.max.y : box.min.y, k & 4 ? box.max.z : box.min.z))
     const view = this.stage.fitBox(box.clone().expandByScalar(2), this.stage.camera.aspect, 0.8)
     const distance = this.stage.camera.position.distanceTo(this.stage.controls.target)
     const fitted = view.position.distanceTo(view.target)
-    if (!this.stage.canSee(corners) || distance > fitted * 1.5) void this.stage.glideTo(view, 750)
+    if (!this.stage.canSee(corners) || (!onlyIfHidden && distance > fitted * 1.5)) void this.stage.glideTo(view, onlyIfHidden ? 450 : 750)
   }
 
   frameAll() {
