@@ -2,13 +2,11 @@
 
 **Build with bricks in your browser. Describe what you want, check the preview, and watch it snap together.**
 
-Named after clutch power, the grip that holds two bricks together.
-
 <p align="center">
   <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed, a request for a small house appears as a translucent preview and drops into place when applied, a second request adds a path, trees and a fence, and then the Build button replays the model going together." width="800">
 </p>
 
-<p align="center"><em>A real recording: one request builds a house, a second adds a garden to it, and Build replays it. Only the wait for the model is sped up. <a href="docs/media/demo.mp4">Sharper video (MP4)</a>.</em></p>
+<p align="center"><em>A real recording: one request builds a house, a second adds a garden to it, and Build replays it. <a href="docs/media/demo.mp4">Sharper video (MP4)</a>.</em></p>
 
 ## Start it
 
