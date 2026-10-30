@@ -43,11 +43,14 @@ export class Replay {
     })
     this.range.addEventListener('input', () => { this.pause(); this.jump(Number(this.range.value) - 1) })
     document.addEventListener('keydown', (event) => {
-      if (!this.active) return
+      if (!this.active || document.querySelector('dialog[open]')) return
+      const el = document.activeElement as HTMLElement | null
+      const typing = el && (el.tagName === 'TEXTAREA' || el.isContentEditable || (el.tagName === 'INPUT' && el !== this.range))
+      if (typing) return
       if (event.key === 'Escape') this.stop()
       if (event.key === ' ') { event.preventDefault(); this.togglePlay() }
-      if (event.key === 'ArrowLeft') { this.pause(); this.jump(this.index - 1) }
-      if (event.key === 'ArrowRight') { this.pause(); this.jump(this.index + 1, true) }
+      if (event.key === 'ArrowLeft') { event.preventDefault(); this.pause(); this.jump(this.index - 1) }
+      if (event.key === 'ArrowRight') { event.preventDefault(); this.pause(); this.jump(this.index + 1, true) }
     })
   }
 

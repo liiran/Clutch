@@ -156,6 +156,39 @@ test('New chat clears the conversation and any preview', async () => {
   assert.equal(await page.evaluate(() => (window as any).clutch.store.count), 0)
 })
 
+test('New chat during a reply starts clean, with no stray message', async () => {
+  await clean()
+  answer = async () => { /* never answers */ }
+  await send('something huge')
+  await wait(100)
+  await page.click('#chat-new')
+  await wait(100)
+  assert.equal(await page.$('.chat-msg'), null)
+  assert.equal(await page.$eval('#chat-welcome', (el) => (el as HTMLElement).hidden), false)
+  assert.equal(await page.$eval('#chat-send', (el) => el.classList.contains('is-stop')), false)
+  answer = reply({ reply: 'Back.', actions: [] })
+  await send('hello')
+  await done()
+  assert.equal(await page.$$eval('.chat-msg.ai', (els) => els.at(-1)?.textContent), 'Back.')
+})
+
+test('a reply that lands during a replay stops the replay first', async () => {
+  await clean()
+  await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }], 'load'))
+  answer = async (request) => {
+    await wait(300)
+    await reply({ reply: 'Ok.', actions: [{ tool: 'place', part: 'brick_1x1', color: 'red', at: [[20, 0, 20]] }] })(request)
+  }
+  await send('add one')
+  await wait(60)
+  await page.click('#build-play')
+  assert.equal(await page.evaluate(() => (window as any).clutch.replay.active), true)
+  await done()
+  assert.equal(await page.evaluate(() => (window as any).clutch.replay.active), false)
+  assert.equal(await page.evaluate(() => (window as any).clutch.chat.isPreviewing), true)
+  await page.click('#chat-decline')
+})
+
 test('asking during a replay stops it, and asking from the Parts tab returns to the model', async () => {
   await clean()
   await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }], 'load'))

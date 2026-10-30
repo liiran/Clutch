@@ -79,6 +79,29 @@ test('a failed repair keeps the first answer', async () => {
   })
 })
 
+test('a repair that runs out of time keeps the first answer', async () => {
+  let calls = 0
+  const ask = (_prompt: string, signal: AbortSignal) => {
+    if (calls++ === 0) return Promise.resolve(floating)
+    return new Promise((_done, fail) => signal.addEventListener('abort', () => fail(new Error('aborted'))))
+  }
+  await withServer({ ask, timeoutMs: 150 }, async (url) => {
+    const response = await post(url, { message: 'Build', bricks: [] })
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).reply, 'A floating brick.')
+  })
+  assert.equal(calls, 2)
+})
+
+test('a first answer that runs out of time says so', async () => {
+  const ask = (_prompt: string, signal: AbortSignal) => new Promise((_done, fail) => signal.addEventListener('abort', () => fail(new Error('aborted'))))
+  await withServer({ ask, timeoutMs: 100 }, async (url) => {
+    const response = await post(url, { message: 'Build', bricks: [] })
+    assert.equal(response.status, 504)
+    assert.match((await response.json()).error, /has not changed/)
+  })
+})
+
 test('a question gets an answer with no actions and no repair', async () => {
   let calls = 0
   await withServer({ ask: async () => { calls++; return { reply: 'It looks solid.', actions: [] } } }, async (url) => {

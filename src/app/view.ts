@@ -160,8 +160,9 @@ export class View {
     if (this.stage.reducedMotion) { this.layer.remove(id); return }
     this.falling = this.falling.filter((item) => item.id !== id)
     void this.stage.tween(130, (k) => {
+      if (this.store.grid.bricks.has(id)) return // undone while it was leaving
       if (k === 1) this.layer.remove(id)
-      else if (!this.store.grid.bricks.has(id)) this.layer.setPose(id, k * 0.3, 1 - k * k)
+      else this.layer.setPose(id, k * 0.3, 1 - k * k)
     })
   }
 

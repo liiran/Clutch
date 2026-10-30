@@ -398,6 +398,121 @@ test('clear asks first, and undo brings it back', async () => {
   assert.equal((await state()).count, 1)
 })
 
+test('typing in the chat during a replay stays in the chat', async () => {
+  await reset()
+  await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }], 'load'))
+  await page.click('#build-play')
+  await page.click('#chat-input')
+  await page.type('#chat-input', 'a tall tower')
+  assert.equal(await page.$eval('#chat-input', (el) => (el as HTMLTextAreaElement).value), 'a tall tower')
+  await page.keyboard.press('Escape')
+  assert.equal((await state()).replaying, true, 'Esc in the chat box does not stop the replay')
+  await page.evaluate(() => { (document.getElementById('chat-input') as HTMLTextAreaElement).value = ''; (document.activeElement as HTMLElement).blur() })
+  await page.keyboard.press('Escape')
+  assert.equal((await state()).replaying, false)
+})
+
+test('Open stops a replay, and opening a build clears the selection', async () => {
+  await reset()
+  await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }, { id: 2, part: 'brick_2x4', color: 'blue', x: 9, y: 0, z: 3, rot: 0 }], 'load'))
+  await wait(900)
+  await page.click('#build-play')
+  await page.click('#open')
+  await wait(150)
+  assert.equal((await state()).replaying, false)
+  await page.click('[data-do="close"]')
+  await page.evaluate(() => (window as any).clutch.tools.select(1))
+  await page.click('#open')
+  await wait(100)
+  await page.click('.project-card[data-open]')
+  await wait(100)
+  assert.equal((await state()).selected, null)
+  assert.equal(await page.$eval('#dock', (el) => (el as HTMLElement).hidden), true)
+})
+
+test('the dock follows the piece when it changes from elsewhere', async () => {
+  await reset()
+  await page.evaluate(() => {
+    const { store, tools } = (window as any).clutch
+    store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }], 'load')
+    tools.select(1)
+  })
+  await page.click('#palette .swatch[title="Blue"]')
+  assert.match(await page.$eval('.dock-meta', (el) => el.textContent ?? ''), /^Blue/)
+  await page.click('#undo')
+  assert.match(await page.$eval('.dock-meta', (el) => el.textContent ?? ''), /^Red/)
+})
+
+test('Move then Esc puts the piece back, and putting it down moves it', async () => {
+  await reset()
+  await page.evaluate(() => {
+    const { store, tools } = (window as any).clutch
+    store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 20, y: 0, z: 20, rot: 0 }], 'load')
+    tools.select(1)
+  })
+  await page.keyboard.press('g')
+  let s = await state()
+  assert.equal(s.count, 0)
+  assert.equal(s.mode, 'place')
+  await page.keyboard.press('Escape')
+  s = await state()
+  assert.equal(s.count, 1, 'it came back')
+  assert.equal(s.mode, 'select')
+  assert.equal(s.selected, 1)
+  await page.keyboard.press('g')
+  await clickAt(10, 10)
+  s = await state()
+  assert.equal(s.count, 1)
+  assert.notEqual(s.bricks[0].x, 20)
+  await page.keyboard.press('Escape')
+  assert.equal((await state()).count, 1, 'Esc after putting it down does not undo the move')
+})
+
+test('undo straight after erasing brings back a visible piece', async () => {
+  await reset()
+  const visible = await page.evaluate(async () => {
+    const { store, view } = (window as any).clutch
+    store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 20, y: 0, z: 20, rot: 0 }], 'load')
+    store.remove(1)
+    store.undo()
+    await new Promise((done) => setTimeout(done, 300))
+    return view.layer.has(1)
+  })
+  assert.equal(visible, true)
+})
+
+test('Enter applies a preview even when a button has focus', async () => {
+  await reset()
+  await page.evaluate(() => {
+    (window as any).clutch.chat.preview([{ tool: 'place', part: 'brick_2x2', color: 'red', at: [[5, 0, 5]] }])
+    document.getElementById('chat-send')!.focus()
+  })
+  await page.keyboard.press('Enter')
+  assert.equal((await state()).count, 1)
+})
+
+test('Build is off during a preview, and a saved list over the limit says what went', async () => {
+  await reset()
+  await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }], 'load'))
+  await wait(50)
+  await page.evaluate(() => (window as any).clutch.chat.preview([{ tool: 'place', part: 'brick_1x1', color: 'red', at: [[20, 0, 20]] }]))
+  await wait(50)
+  assert.equal(await page.$eval('#build-play', (el) => (el as HTMLButtonElement).disabled), true)
+  await page.click('#chat-decline')
+  await wait(50)
+  assert.equal(await page.$eval('#build-play', (el) => (el as HTMLButtonElement).disabled), false)
+
+  await page.evaluate(() => {
+    const old = Array.from({ length: 24 }, (_, i) => ({ id: 'old' + i, updatedAt: '', file: { version: 1, name: 'Old ' + i, baseplate: 'green', bricks: [] } }))
+    localStorage.setItem('clutch_projects', JSON.stringify(old))
+    const { store } = (window as any).clutch
+    store.projectId = null
+    store.place('brick_1x1', 'red', 40, 0, 40, 0)
+  })
+  await wait(1000)
+  assert.match(await page.$eval('#hint-text', (el) => el.textContent ?? ''), /"Old 23" was removed/)
+})
+
 test('nothing went wrong in the page', () => {
   assert.deepEqual(page.errors, [])
 })

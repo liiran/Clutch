@@ -106,7 +106,7 @@ function refreshCounts() {
     $('stats').hidden = empty
     $('empty').hidden = !empty || chat.isPreviewing || replay.active
     $('clear').hidden = empty || tools.isLocked
-    ;($('build-play') as HTMLButtonElement).disabled = empty
+    ;($('build-play') as HTMLButtonElement).disabled = empty || chat.isPreviewing
     looseIds = store.grid.loose()
     looseChip.hidden = !looseIds.length
     looseChip.textContent = `${looseIds.length} not attached`
@@ -170,6 +170,7 @@ store.onMeta(refreshMeta)
 const viewButtons = document.querySelectorAll<HTMLButtonElement>('[data-view]')
 function showView(which: 'build' | 'parts') {
   const parts = which === 'parts'
+  if (parts) tools.cancelLift()
   viewButtons.forEach((button) => button.classList.toggle('active', button.dataset.view === which))
   $('parts-view').hidden = !parts
   $('viewport').classList.toggle('is-covered', parts)
@@ -181,6 +182,8 @@ function showView(which: 'build' | 'parts') {
 viewButtons.forEach((button) => button.addEventListener('click', () => showView(button.dataset.view as 'build' | 'parts')))
 store.onChange(() => { if (!$('parts-view').hidden) partsView.render() })
 partsView.onOpenStep = (index) => {
+  if (chat.isPreviewing) return
+  tools.cancelLift()
   showView('build')
   replay.start(index)
 }
@@ -198,10 +201,13 @@ replay.onChange = () => {
 }
 $('build-play').addEventListener('click', () => {
   if (replay.active) { replay.stop(); return }
+  tools.cancelLift()
   showView('build')
   replay.start()
 })
+chat.onBeforePreview = () => replay.stop()
 chat.onAsk = () => {
+  tools.cancelLift()
   replay.stop()
   showView('build')
 }
@@ -219,7 +225,11 @@ $('part-list').addEventListener('click', (event) => {
 })
 $('undo').addEventListener('click', () => store.undo())
 $('redo').addEventListener('click', () => store.redo())
-$('open').addEventListener('click', () => projects.openDialog())
+$('open').addEventListener('click', () => {
+  tools.cancelLift()
+  replay.stop()
+  projects.openDialog()
+})
 $('download').addEventListener('click', () => projects.download())
 $('share').addEventListener('click', () => void projects.share())
 $('frame').addEventListener('click', () => view.frameAll())
@@ -263,9 +273,10 @@ function refreshReset() { resetBtn.hidden = stage.isAtDefaultView() }
 stage.onViewChange = refreshReset
 
 // ── Start ──────────────────────────────────────────────────────
-projects.isAnimating = () => view.isAnimating
+projects.isAnimating = () => view.isAnimating || replay.active || chat.isPreviewing
 projects.showOverlays = (show) => view.setOverlaysVisible(show)
 projects.onOpened = () => {
+  tools.select(null)
   showView('build')
   tools.setMode('select')
   chat.reset()

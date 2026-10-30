@@ -13,6 +13,7 @@ export type Ask = (prompt: string, signal: AbortSignal) => Promise<unknown>
 
 export interface ApiOptions extends ClaudeOptions {
   ask?: Ask // replaces the CLI, for tests
+  timeoutMs?: number
 }
 
 const TIMEOUT = 240000
@@ -89,8 +90,13 @@ export function createChatHandler(options: ApiOptions = {}) {
     }
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT)
-    const cancel = () => { if (!response.writableEnded) controller.abort() }
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? TIMEOUT)
+    let gone = false
+    const cancel = () => {
+      if (response.writableEnded) return
+      gone = true
+      controller.abort()
+    }
     response.on('close', cancel)
     try {
       const prompt = buildPrompt(message, history, bricks)
@@ -108,8 +114,9 @@ export function createChatHandler(options: ApiOptions = {}) {
             attempts = 2
           }
         } catch (error) {
-          if (controller.signal.aborted) throw error
-          // The first answer stands, and its problems show on the check card.
+          if (gone) throw error
+          // Even if the repair ran out of time, the first answer stands, and its
+          // problems show on the check card.
         }
       }
       json(response, 200, { reply: answer.reply, actions: answer.actions, attempts })

@@ -274,6 +274,8 @@ export class Home {
   open() {
     if (this.leaving) return
     this.leaving = true
+    this.held = false
+    this.stage.controls.enabled = true
     this.capTarget = BASE_H - PRESS
     this.listening.abort()
     this.stage.canvas.style.cursor = ''

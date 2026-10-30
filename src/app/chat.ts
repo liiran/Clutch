@@ -55,6 +55,7 @@ export class Chat {
   private barCount = document.getElementById('chat-pending-count')!
   onPreviewChange: (open: boolean) => void = () => {}
   onAsk: () => void = () => {}
+  onBeforePreview: () => void = () => {}
 
   constructor(store: Store, view: View, tools: Tools) {
     this.store = store
@@ -82,9 +83,14 @@ export class Chat {
     })
     document.addEventListener('keydown', (event) => {
       if (!this.pending || document.querySelector('dialog[open]')) return
-      const active = document.activeElement
+      const active = document.activeElement as HTMLElement | null
       if (event.key === 'Escape') this.decline()
-      else if (event.key === 'Enter' && (!active || active === document.body || active.tagName === 'CANVAS')) this.accept()
+      else if (event.key === 'Enter') {
+        const typing = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.isContentEditable)
+        if (typing || active?.closest('#chat-pending')) return
+        event.preventDefault() // or Enter also presses whichever button has focus
+        this.accept()
+      }
     })
     void this.loadStatus()
   }
@@ -187,6 +193,7 @@ export class Chat {
     try {
       const data = await this.request(message, controller.signal)
       typing.stop()
+      if (this.controller !== controller) return
       if (revision !== this.store.revision) {
         this.addMessage('The build changed while I was working. Send the request again and I will start from what is there now.', 'system')
         return
@@ -196,11 +203,14 @@ export class Chat {
       if (data.actions.length) this.preview(data.actions, data.attempts)
     } catch (error) {
       typing.stop()
+      if (this.controller !== controller) return // the chat was reset
       if (controller.signal.aborted) this.addMessage('Stopped.', 'system')
       else this.addMessage((error as Error).message, 'system')
     } finally {
-      this.controller = null
-      this.setBusy(false)
+      if (this.controller === controller) {
+        this.controller = null
+        this.setBusy(false)
+      }
     }
   }
 
@@ -210,6 +220,7 @@ export class Chat {
     const changes = result.added.length + result.removed.length + result.changed.length
     this.addVerdict(verdictFor(result), attempts)
     if (!changes) return
+    this.onBeforePreview()
     this.pending = { result, revision: this.store.revision }
     this.tools.setLocked(true)
     this.view.showProposal(result)
@@ -253,7 +264,10 @@ export class Chat {
   get isPreviewing() { return this.pending !== null }
 
   reset() {
-    this.controller?.abort()
+    const running = this.controller
+    this.controller = null
+    running?.abort()
+    this.setBusy(false)
     this.closePreview()
     this.history.length = 0
     this.messages.querySelectorAll('.chat-msg, .verify').forEach((el) => el.remove())

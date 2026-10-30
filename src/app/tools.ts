@@ -43,6 +43,7 @@ export class Tools {
   private paintTint = new THREE.Color()
   private down: { x: number; y: number; id: number } | null = null
   private dragged = false
+  private lifted: number | null = null // the piece on the pointer, picked up by Move
 
   onState: () => void = () => {}
   onSelection: () => void = () => {}
@@ -80,8 +81,12 @@ export class Tools {
       this.clearHover()
     })
     stage.controls.addEventListener('change', () => this.queueHover())
-    store.onChange(() => {
-      if (this.selected !== null && !store.grid.bricks.has(this.selected)) this.select(null)
+    store.onChange((change) => {
+      if (change.cause === 'undo') this.lifted = null
+      if (this.selected !== null) {
+        if (store.grid.bricks.has(this.selected)) this.onSelection()
+        else this.select(null)
+      }
       this.queueHover()
     })
     document.addEventListener('keydown', (event) => this.key(event))
@@ -103,9 +108,20 @@ export class Tools {
 
   get isLocked() { return this.locked }
 
+  // Puts a piece picked up by Move back where it was.
+  cancelLift() {
+    if (this.lifted === null) return
+    const id = this.lifted
+    this.lifted = null
+    this.store.undo()
+    return id
+  }
+
   setMode(mode: Mode) {
+    const back = mode === 'place' ? undefined : this.cancelLift()
     this.mode = mode
     if (mode !== 'select') this.select(null)
+    else if (back !== undefined) this.select(back)
     this.clearHover()
     this.refreshCursor()
     this.queueHover()
@@ -125,6 +141,7 @@ export class Tools {
   }
 
   pickPart(part: string) {
+    this.cancelLift()
     this.part = part
     this.setMode('place')
   }
@@ -174,6 +191,8 @@ export class Tools {
     this.grab(brick)
     this.store.remove(brick.id)
     this.setMode('place')
+    this.lifted = brick.id
+    this.onHint('Click to put it down · Esc puts it back')
   }
 
   copySelected() {
@@ -326,18 +345,18 @@ export class Tools {
       const spot = hit ? this.spotFor(hit) : null
       if (!spot) return
       if (!spot.ok) { this.onHint(`Can't place here: ${spot.why}`, 2400); return }
-      this.store.place(this.part, this.color, spot.x, spot.y, spot.z, this.rot)
+      if (this.store.place(this.part, this.color, spot.x, spot.y, spot.z, this.rot)) this.lifted = null
       return
     }
     const id = hit?.kind === 'brick' ? hit.id : null
     if (this.mode === 'select') { this.select(id); return }
     if (id === null) return
     if (this.mode === 'erase') {
-      this.hoverId = null
+      this.setHoverTint(null, WHITE_TINT)
       this.store.remove(id)
     } else if (this.mode === 'paint') {
       if (this.store.grid.bricks.get(id)!.color !== this.color) {
-        this.hoverId = null
+        this.setHoverTint(null, WHITE_TINT)
         this.store.update(id, { color: this.color })
       }
     }

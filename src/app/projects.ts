@@ -122,12 +122,14 @@ export class Projects {
     const entry: Saved = { id: store.projectId, updatedAt: new Date().toISOString(), thumb: index >= 0 ? list[index].thumb : undefined, file: this.file() }
     const now = Date.now()
     if (!store.count) entry.thumb = undefined
-    else if (forceThumb || !entry.thumb || now - this.lastThumb > THUMB_EVERY) {
+    else if (!this.isAnimating() && (forceThumb || !entry.thumb || now - this.lastThumb > THUMB_EVERY)) {
       this.lastThumb = now
       entry.thumb = this.capture() ?? entry.thumb
     }
     if (index >= 0) list.splice(index, 1)
     list.unshift(entry)
+    const dropped = list.slice(MAX_PROJECTS).map((item) => item.file?.name || 'Untitled')
+    if (dropped.length) this.onHint(`Clutch keeps your latest ${MAX_PROJECTS} builds, so "${dropped[0]}" was removed. Download builds you want to keep.`, 6000)
     this.write(list.slice(0, MAX_PROJECTS))
     localStorage.setItem(LAST, store.projectId)
   }
@@ -136,6 +138,8 @@ export class Projects {
     for (let keep = list.length; keep > 0; keep--) {
       try {
         localStorage.setItem(KEY, JSON.stringify(list.slice(0, keep)))
+        const lost = list.length - keep
+        if (lost) this.onHint(`This browser ran out of space, so your oldest ${lost === 1 ? 'build was' : `${lost} builds were`} removed. Download builds you want to keep.`, 6000)
         return
       } catch { /* over quota: drop the oldest and try again */ }
     }
