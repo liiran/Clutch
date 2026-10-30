@@ -6,7 +6,14 @@ import { CATEGORIES, PARTS, type PartDef } from '../core/parts.ts'
 import { drawThumb } from '../render/thumbs.ts'
 import type { Tools } from './tools.ts'
 
-const label = (part: PartDef) => part.name.replace(/^(Brick|Plate|Tile) /, '')
+// The menu's sections already name the kind of part, so its tiles can be brief.
+const label = (part: PartDef) => part.name
+  .replace(/^(Brick|Plate|Tile) /, '')
+  .replace('Inverted slope', 'Inverted')
+  .replace('Roof ridge', 'Ridge')
+  .replace('Round brick', 'Round')
+  .replace('Round plate', 'Disc')
+  .replace('Wheel set', 'Wheels')
 
 export class Sidebar {
   private tools: Tools

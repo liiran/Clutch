@@ -2,7 +2,6 @@
 
 import { fromFile, toFile, type Build, type BuildFile } from '../core/file.ts'
 import { PART } from '../core/parts.ts'
-import type { Brick } from '../core/model.ts'
 import * as THREE from 'three'
 import { SIZE } from '../core/model.ts'
 import { PLATE_H } from '../render/geometry.ts'
@@ -304,5 +303,3 @@ export class Projects {
     }
   }
 }
-
-export type { Brick }

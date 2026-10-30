@@ -4,7 +4,6 @@
 
 import * as THREE from 'three'
 import { SIZE, type Brick } from '../core/model.ts'
-import { COLOR } from '../core/colors.ts'
 import { PART } from '../core/parts.ts'
 import { buildOrder } from '../core/steps.ts'
 import type { ApplyResult } from '../core/actions.ts'
@@ -334,5 +333,3 @@ export class View {
     void this.stage.glideTo(this.stage.fitBox(this.boundsOf(bricks).expandByScalar(1.5)), 650)
   }
 }
-
-export const colorHex = (id: string) => COLOR.get(id)!.hex

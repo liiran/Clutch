@@ -44,6 +44,20 @@ function titleBricks(): Brick[][] {
     out.push(pieces)
     x += letter.rows[0].length + 1
   }
+  // A little garden around the title.
+  const garden: Brick[] = []
+  const put = (part: string, color: string, px: number, y: number, pz: number) => {
+    garden.push({ id: id++, part, color, x: px, y, z: pz, rot: 0 })
+  }
+  for (const [tx, tz] of [[3, 11], [43, 13]]) {
+    put('round_1x1', 'brown', tx, 0, tz)
+    put('round_1x1', 'brown', tx, 3, tz)
+    put('plate_2x2', 'forest', tx, 6, tz)
+    put('cone_2x2', 'green', tx, 7, tz)
+  }
+  const flowers: Array<[string, number, number]> = [['red', 6, 15], ['pink', 2, 16], ['yellow', 7, 12], ['purple', 40, 16], ['white', 45, 17], ['orange', 41, 12]]
+  for (const [color, fx, fz] of flowers) put('flower_1x1', color, fx, 0, fz)
+  out.push(garden)
   return out
 }
 
@@ -163,7 +177,7 @@ export class Home {
     const direction = new THREE.Vector3(0, 0.5, 1).normalize()
     const target = new THREE.Vector3(0, 1.6, 2)
     const corners: THREE.Vector3[] = []
-    for (const x of [-20, 20]) for (const y of [0, 7]) for (const z of [-13, 16]) corners.push(new THREE.Vector3(x, y, z))
+    for (const x of [-21, 21]) for (const y of [0, 7]) for (const z of [-13, 16]) corners.push(new THREE.Vector3(x, y, z))
     const place = (distance: number) => {
       camera.position.copy(target).addScaledVector(direction, distance)
       camera.lookAt(target)

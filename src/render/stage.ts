@@ -7,7 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { SIZE } from '../core/model.ts'
 import { COLOR } from '../core/colors.ts'
-import { baseplateStud, plainBox, PLATE_H } from './geometry.ts'
+import { baseplateStud, plainBox } from './geometry.ts'
 
 const BACKGROUND = 0x25282e
 const OFF = SIZE / 2
@@ -31,8 +31,8 @@ export class Stage {
   private shadowsDirty = true
   private lastShadow = 0
   private plateMaterial: THREE.MeshStandardMaterial
-  private view = { position: new THREE.Vector3(), target: new THREE.Vector3() }
   private gliding = false
+  private started = false
   private glideRun = 0
   private slowFrames = 0
   private lastDraw = 0
@@ -89,7 +89,7 @@ export class Stage {
     const start = this.defaultView()
     this.camera.position.copy(start.position)
     this.controls.target.copy(start.target)
-    this.view = start
+    this.started = true
     requestAnimationFrame((now) => this.frame(now))
   }
 
@@ -161,9 +161,17 @@ export class Stage {
   private resize() {
     const w = this.container.clientWidth, h = this.container.clientHeight
     if (!w || !h) return
+    // A view that was showing the whole plate keeps showing it.
+    const refit = this.started && !this.gliding && this.isAtDefaultView()
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(w, h)
+    if (refit) {
+      const view = this.defaultView()
+      this.camera.position.copy(view.position)
+      this.controls.target.copy(view.target)
+      this.camera.lookAt(view.target)
+    }
     this.draw() // Resizing clears the canvas, so draw straight away or it flashes.
   }
 
@@ -271,7 +279,7 @@ export class Stage {
     })
   }
 
-  resetView() { this.view = this.defaultView(); return this.glideTo(this.view) }
+  resetView() { return this.glideTo(this.defaultView()) }
 
   isAtDefaultView() {
     if (this.gliding) return true
@@ -288,5 +296,3 @@ export class Stage {
     })
   }
 }
-
-export { PLATE_H }

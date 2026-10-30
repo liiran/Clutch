@@ -130,6 +130,8 @@
           <dt>F</dt><dd>Frame the build</dd>
           <dt>Ctrl+Z / Ctrl+Y</dt><dd>Undo / redo</dd>
         </dl>
+        <h3 class="help-limits">Limits</h3>
+        <p class="help-note">The baseplate is 48 × 48 studs and builds can reach 32 bricks tall, with up to 3000 pieces. One chat reply can add up to 1500.</p>
       </div>
     </div>
 
@@ -172,7 +174,7 @@
       </div>
       <div class="chat-input-row">
         <div class="chat-input-box">
-          <textarea id="chat-input" rows="1" placeholder="Describe what to build…" aria-label="Message"></textarea>
+          <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Describe what to build…" aria-label="Message"></textarea>
           <button id="chat-send" title="Send" aria-label="Send" data-icon="send" data-size="15"></button>
         </div>
       </div>

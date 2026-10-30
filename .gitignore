@@ -4,3 +4,4 @@ dist
 bench/results
 tests/e2e/shots
 *.log
+.claude

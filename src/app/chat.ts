@@ -142,7 +142,7 @@ export class Chat {
     el.innerHTML = `
       <div class="verify-head">${icon(verdict.ok ? 'check' : 'warn', 14, 2.6)}<span>${verdict.ok ? 'Checked' : 'Not quite right'}</span></div>
       <div class="verify-body">${escapeHtml(verdict.summary)}</div>${problems}
-      ${attempts > 1 ? '<div class="verify-meta">Fixed on a second try</div>' : ''}`
+      ${attempts > 1 ? `<div class="verify-meta">${verdict.ok ? 'Fixed on a second try' : 'Better on a second try, but not all fixed. You can still apply it and finish by hand.'}</div>` : ''}`
     this.messages.append(el)
     this.messages.scrollTop = this.messages.scrollHeight
   }

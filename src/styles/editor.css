@@ -570,6 +570,8 @@ html.is-replaying #where, html.is-replaying #dock, html.is-replaying .view-tools
 #help dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 12px; }
 #help dt { font: 500 11px var(--mono); color: var(--glass-ink); padding-top: 1px; white-space: nowrap; }
 #help dd { color: var(--glass-ink-2); }
+#help .help-limits { margin: 12px 0 4px; }
+.help-note { font-size: 12px; line-height: 1.45; color: var(--glass-ink-2); }
 
 /* ── Scrollbars ───────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -614,15 +616,16 @@ html.scene .skip-link:focus-visible { transform: translate(-50%, 0); }
 @media (max-width: 1024px) {
   #body { flex-direction: column; }
   #viewport { order: -1; flex: 1 1 auto; min-height: 0; }
-  #sidebar { width: 100%; height: 136px; border-right: none; border-top: 1px solid var(--line); }
+  #sidebar { width: 100%; border-right: none; border-top: 1px solid var(--line); flex-shrink: 0; }
   .search { display: none; }
-  #part-list { display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 10px 4px; }
+  #part-list { flex: none; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 10px 4px; }
   .part-section + .part-section { margin-top: 0; }
   .section-label { display: none; }
   .part-grid { display: flex; }
   .part-tile { width: 56px; }
-  .palette { grid-template-columns: repeat(22, 1fr); }
-  html.scene #sidebar, html.entering #sidebar { top: auto; left: 0; right: 0; bottom: 34vh; }
+  .palette { grid-template-columns: repeat(22, 22px); gap: 5px; justify-content: center; }
+  .palette-wrap { padding: 6px 10px 7px; }
+  html.scene #sidebar, html.entering #sidebar { top: auto; left: 0; right: 0; bottom: 30vh; }
   html.scene #chat, html.entering #chat { top: auto; left: 0; right: 0; bottom: 0; }
   html.scene #sidebar, html.scene #chat { transform: translateY(100vh); }
 }
