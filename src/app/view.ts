@@ -196,11 +196,8 @@ export class View {
     this.cursorKey = key
     const rotated = PART.get(part)!.rots[rot]
     const at = new THREE.Vector3(x + rotated.w / 2 - OFF, y * PLATE_H, z + rotated.d / 2 - OFF)
-    // Slide from where it was, so the ghost feels attached to the pointer and not jumpy.
-    if (this.cursorAt && !this.stage.reducedMotion) {
-      this.cursorOffset.add(this.cursorAt).sub(at)
-      if (this.cursorOffset.length() > 6) this.cursorOffset.set(0, 0, 0)
-    }
+    // It jumps straight to the new spot and seats itself, so it feels locked to the studs.
+    if (this.cursorAt && !this.cursorAt.equals(at) && !this.stage.reducedMotion) this.cursorOffset.set(0, 0.14, 0)
     this.cursorAt = at
     this.cursor.clear()
     this.cursor.add({ id: 1, part, color, x, y, z, rot })
@@ -211,7 +208,7 @@ export class View {
       let last = performance.now()
       const tick = () => {
         const now = performance.now()
-        const decay = Math.exp(-(now - last) / 28)
+        const decay = Math.exp(-(now - last) / 22)
         last = now
         this.cursorOffset.multiplyScalar(decay)
         this.cursor.group.position.copy(this.cursorOffset)

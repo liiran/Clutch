@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { MAX_PIECES, MAX_Y, SIZE, type Brick, type Rot } from '../core/model.ts'
 import { COLOR, DEFAULT_COLOR } from '../core/colors.ts'
 import { DEFAULT_PART, PART } from '../core/parts.ts'
+import { alignTo, holdStud } from '../core/snap.ts'
 import { WHITE_TINT, RED_TINT } from '../render/layer.ts'
 import { castRay, type Hit } from '../render/raycast.ts'
 import type { Stage } from '../render/stage.ts'
@@ -44,6 +45,7 @@ export class Tools {
   private down: { x: number; y: number; id: number } | null = null
   private dragged = false
   private lifted: number | null = null // the piece on the pointer, picked up by Move
+  private heldSpot: { x: number; y: number; z: number; key: string } | null = null // where the ghost is holding
 
   onState: () => void = () => {}
   onSelection: () => void = () => {}
@@ -291,27 +293,36 @@ export class Tools {
     const grid = this.store.grid
     let x: number, z: number, y: number
     let settle = false
+    // The ghost holds its stud until the pointer has clearly moved on, and only for this
+    // part and rotation.
+    const key = `${this.part}|${this.rot}`
+    const held = this.heldSpot?.key === key ? this.heldSpot : null
+    const stud = (ideal: number, axis: 'x' | 'z') => holdStud(ideal, held ? held[axis] : null)
+    const onPiece = hit.kind === 'brick' ? grid.bricks.get(hit.id)! : null
+    const under = onPiece ? PART.get(onPiece.part)!.rots[onPiece.rot] : null
+    const alignedX = (ideal: number) => onPiece && under ? alignTo(ideal, w, onPiece.x, under.w) : ideal
+    const alignedZ = (ideal: number) => onPiece && under ? alignTo(ideal, d, onPiece.z, under.d) : ideal
 
     if (hit.kind === 'plate') {
       // A little way past the edge the ghost stays on the plate. Further out, it is gone.
       if (hit.x < -5 || hit.z < -5 || hit.x > SIZE + 5 || hit.z > SIZE + 5) return null
-      x = clampX(Math.round(hit.x - w / 2))
-      z = clampZ(Math.round(hit.z - d / 2))
+      x = clampX(stud(hit.x - w / 2, 'x'))
+      z = clampZ(stud(hit.z - d / 2, 'z'))
       y = 0
     } else {
       const [nx, ny, nz] = hit.normal
       const [cx, cy, cz] = hit.cell
       if (ny > 0) {
-        x = clampX(Math.round(hit.x - w / 2))
-        z = clampZ(Math.round(hit.z - d / 2))
+        x = clampX(stud(alignedX(hit.x - w / 2), 'x'))
+        z = clampZ(stud(alignedZ(hit.z - d / 2), 'z'))
         y = cy + 1
       } else if (ny < 0) {
-        x = clampX(Math.round(hit.x - w / 2))
-        z = clampZ(Math.round(hit.z - d / 2))
+        x = clampX(stud(alignedX(hit.x - w / 2), 'x'))
+        z = clampZ(stud(alignedZ(hit.z - d / 2), 'z'))
         y = Math.max(0, cy - def.h)
       } else {
-        x = nx > 0 ? clampX(cx + 1) : nx < 0 ? clampX(cx - w) : clampX(Math.round(hit.x - w / 2))
-        z = nz > 0 ? clampZ(cz + 1) : nz < 0 ? clampZ(cz - d) : clampZ(Math.round(hit.z - d / 2))
+        x = nx > 0 ? clampX(cx + 1) : nx < 0 ? clampX(cx - w) : clampX(stud(alignedX(hit.x - w / 2), 'x'))
+        z = nz > 0 ? clampZ(cz + 1) : nz < 0 ? clampZ(cz - d) : clampZ(stud(alignedZ(hit.z - d / 2), 'z'))
         y = cy
         settle = true
       }
@@ -323,6 +334,7 @@ export class Tools {
     }
     // Then up until it is clear of everything.
     while (y + def.h <= MAX_Y && !grid.fits(this.part, x, y, z, this.rot).ok) y++
+    this.heldSpot = { x, y, z, key }
     if (y + def.h > MAX_Y) {
       return { x, y: Math.max(0, MAX_Y - def.h), z, ok: false, why: `the height limit is ${MAX_Y / 3} bricks`, grips: false }
     }

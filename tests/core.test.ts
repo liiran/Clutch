@@ -8,6 +8,7 @@ import { tileCells } from '../src/core/tiling.ts'
 import { planSteps, countParts } from '../src/core/steps.ts'
 import { fromFile, toFile } from '../src/core/file.ts'
 import { describeBuild } from '../src/core/describe.ts'
+import { alignTo, holdStud } from '../src/core/snap.ts'
 import type { Brick } from '../src/core/model.ts'
 
 const brick = (id: number, part: string, x: number, y: number, z: number, rot: 0 | 1 | 2 | 3 = 0): Brick => ({ id, part, color: 'red', x, y, z, rot })
@@ -270,6 +271,30 @@ test('a file round trips, and bad or overlapping rows are left out', () => {
   assert.equal(messy.baseplate, 'green')
   assert.throws(() => fromFile({ version: 9, bricks: [] }), /version/)
   assert.throws(() => fromFile('nope'), /not a Clutch build/)
+})
+
+test('the ghost holds its stud until the pointer has clearly moved on', () => {
+  assert.equal(holdStud(5.4, null), 5)
+  assert.equal(holdStud(5.6, null), 6)
+  assert.equal(holdStud(5.6, 5), 5, 'just past halfway, it holds')
+  assert.equal(holdStud(4.4, 5), 5)
+  assert.equal(holdStud(5.8, 5), 6, 'clearly past, it moves')
+  assert.equal(holdStud(4.2, 5), 4)
+  assert.equal(holdStud(9.2, 5), 9, 'a big move goes straight there')
+})
+
+test('the ghost pulls into line with the piece under it', () => {
+  // A 2 wide piece over a 2 wide piece at 10: anywhere near lines up exactly.
+  assert.equal(alignTo(10.7, 2, 10, 2), 10)
+  assert.equal(alignTo(9.3, 2, 10, 2), 10)
+  // A 2 wide piece on a 4 wide piece at 10: either edge, or the middle, whichever is nearest.
+  assert.equal(alignTo(10.2, 2, 10, 4), 10)
+  assert.equal(alignTo(11.1, 2, 10, 4), 11)
+  assert.equal(alignTo(11.9, 2, 10, 4), 12)
+  // Far away, it is left alone, so offset stacking still works.
+  assert.equal(alignTo(14.5, 2, 10, 4), 14.5)
+  // A centre that falls between studs is not an option.
+  assert.equal(alignTo(10.5, 1, 10, 4), 10.5 - 0.5)
 })
 
 test('the description lists ids and positions', () => {
