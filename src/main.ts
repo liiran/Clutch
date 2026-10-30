@@ -185,7 +185,7 @@ replay.onChange = () => {
   root.classList.toggle('is-replaying', replay.active)
   const button = $('build-play')
   button.classList.toggle('is-stop', replay.active)
-  button.innerHTML = `${icon(replay.active ? 'close' : 'play', 12, 2.4)} ${replay.active ? 'Stop' : 'Build'}`
+  button.innerHTML = `${icon(replay.active ? 'close' : 'play', 12, 2.4)} ${replay.active ? 'Stop' : 'Replay'}`
   refreshCounts()
   refreshHistory()
 }

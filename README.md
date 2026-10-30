@@ -3,10 +3,10 @@
 **Build with bricks in your browser. Describe what you want, check the preview, and watch it snap together.**
 
 <p align="center">
-  <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed, a request for a small house appears as a translucent preview and drops into place when applied, a second request adds a path, trees and a fence, and then the Build button replays the model going together." width="800">
+  <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed, a request for a small house appears as a translucent preview and drops into place when applied, a second request adds a path, trees and a fence, and then the Replay button plays the model going together." width="800">
 </p>
 
-<p align="center"><em>A real recording: one request builds a house, a second adds a garden to it, and Build replays it. <a href="docs/media/demo.mp4">Sharper video (MP4)</a>.</em></p>
+<p align="center"><em>A real recording: one request builds a house, a second adds a garden to it, and Replay plays it back. <a href="docs/media/demo.mp4">Sharper video (MP4)</a>.</em></p>
 
 ## Start it
 
@@ -60,7 +60,7 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 
 ## Watch it go together
 
-**Build** plays your model from the baseplate up, step by step, like the pages of an instruction booklet. You can pause, step through or change the speed. The **Parts** tab lists every piece you need and every step.
+**Replay** plays your model from the baseplate up, step by step, like the pages of an instruction booklet. You can pause, step through or change the speed. The **Parts** tab lists every piece you need and every step.
 
 <p align="center">
   <img src="docs/media/replay.png" alt="The house partway through a replay, with the roof not yet on and the walls half built. A bar along the bottom shows step 9 of 23, the pieces in this step, a slider and speed control." width="49%">
@@ -75,7 +75,7 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 
 ## The chat and what it costs
 
-The chat runs through the Claude Code CLI signed in on your computer, using Claude Sonnet by default. There is no API key to set up. With a Claude subscription, each message counts toward your plan's usage limits rather than being billed separately. Everything else, including building by hand and Build, makes no AI calls at all.
+The chat runs through the Claude Code CLI signed in on your computer, using Claude Sonnet by default. There is no API key to set up. With a Claude subscription, each message counts toward your plan's usage limits rather than being billed separately. Everything else, including building by hand and Replay, makes no AI calls at all.
 
 The model can only return build instructions: it has no tools, so it cannot touch your files or run commands.
 
