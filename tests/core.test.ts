@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { PART, PARTS } from '../src/core/parts.ts'
 import { COLORS } from '../src/core/colors.ts'
 import { Grid } from '../src/core/grid.ts'
-import { applyActions, verdictFor } from '../src/core/actions.ts'
+import { applyActions, repairNotes, verdictFor } from '../src/core/actions.ts'
 import { tileCells } from '../src/core/tiling.ts'
 import { planSteps, countParts } from '../src/core/steps.ts'
 import { fromFile, toFile } from '../src/core/file.ts'
@@ -48,11 +48,17 @@ test('pieces collide, and the baseplate and height limit are enforced', () => {
   assert.deepEqual(grid.fits('brick_1x1', 0, 94, 40, 0), { ok: false, reason: 'height' })
 })
 
-test('the arch leaves its opening free', () => {
-  const grid = new Grid([brick(1, 'arch_1x4', 5, 0, 5)])
-  assert.equal(grid.fits('plate_1x1', 5, 0, 6, 0).ok, true)
-  assert.equal(grid.fits('brick_1x1', 5, 0, 6, 0).ok, false)
-  assert.equal(grid.fits('plate_1x1', 5, 0, 5, 0).ok, false)
+test('walls leave the opening of an arch clear, and it only grips on its legs', () => {
+  const r = applyActions([], [
+    { tool: 'place', part: 'arch_1x6', color: 'red', at: [[5, 0, 5]] },
+    { tool: 'walls', x1: 5, z1: 3, x2: 5, z2: 12, y: 0, height: 9, color: 'white' },
+  ])
+  assert.deepEqual(r.errors, [])
+  assert.deepEqual(r.loose, [])
+  const arch = r.bricks.find((b) => b.part === 'arch_1x6')!
+  assert.equal(new Grid(r.bricks).get(5, 0, 7), arch.id)
+  assert.deepEqual(new Grid([brick(1, 'plate_1x1', 5, 0, 7), brick(2, 'arch_1x4', 5, 1, 6)]).loose(), [2])
+  assert.deepEqual(new Grid([brick(1, 'plate_1x1', 5, 0, 6), brick(2, 'arch_1x4', 5, 1, 6)]).loose(), [])
 })
 
 test('the loose check follows studs, and tiles and slope faces do not grip', () => {
@@ -232,6 +238,8 @@ test('the verdict names problems and passes a clean build', () => {
   const floating = verdictFor(applyActions([], [{ tool: 'place', part: 'brick_1x1', color: 'red', at: [[0, 6, 0]] }]))
   assert.equal(floating.ok, false)
   assert.match(floating.problems[0], /not be attached/)
+  const notes = repairNotes(applyActions([], [{ tool: 'place', part: 'brick_1x1', color: 'red', at: [[0, 6, 0]] }]))
+  assert.match(notes[0], /brick_1x1 red rot 0 at \[0,6,0\]/)
 })
 
 test('steps run bottom up, cover every piece once and stay small', () => {

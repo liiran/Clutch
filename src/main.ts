@@ -105,7 +105,7 @@ function refreshCounts() {
     $('count').classList.toggle('at-limit', store.count >= MAX_PIECES)
     $('stats').hidden = empty
     $('empty').hidden = !empty || chat.isPreviewing || replay.active
-    $('clear').hidden = empty
+    $('clear').hidden = empty || tools.isLocked
     ;($('build-play') as HTMLButtonElement).disabled = empty
     looseIds = store.grid.loose()
     looseChip.hidden = !looseIds.length
@@ -201,13 +201,22 @@ $('build-play').addEventListener('click', () => {
   showView('build')
   replay.start()
 })
-chat.onPreviewChange = () => {
+chat.onAsk = () => {
+  replay.stop()
+  showView('build')
+}
+chat.onPreviewChange = (open) => {
+  if (open) showView('build')
   lockWhile()
   refreshHistory()
   refreshCounts()
 }
 
 // ── Top bar commands ───────────────────────────────────────────
+// Picking a part means building, so it brings the model back.
+$('part-list').addEventListener('click', (event) => {
+  if ((event.target as HTMLElement).closest('.part-tile')) showView('build')
+})
 $('undo').addEventListener('click', () => store.undo())
 $('redo').addEventListener('click', () => store.redo())
 $('open').addEventListener('click', () => projects.openDialog())
@@ -254,7 +263,10 @@ function refreshReset() { resetBtn.hidden = stage.isAtDefaultView() }
 stage.onViewChange = refreshReset
 
 // ── Start ──────────────────────────────────────────────────────
+projects.isAnimating = () => view.isAnimating
+projects.showOverlays = (show) => view.setOverlaysVisible(show)
 projects.onOpened = () => {
+  showView('build')
   tools.setMode('select')
   chat.reset()
   void stage.resetView()

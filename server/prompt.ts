@@ -62,14 +62,17 @@ House, 12 wide by 10 deep, on a floor:
 {"tool":"roof","x1":18,"z1":19,"x2":29,"z2":28,"y":22,"ridge":"x","color":"red","gable":"white"}
 The door stands at y 1 on the floor, is 18 tall, and the walls go 21 high so they close over it. Windows are 6 tall, at y 7. The wall comes up around them and over them.
 
-Car, facing the camera, 4 wide and 12 long:
-{"tool":"place","part":"wheels_4x2","color":"darkgray","at":[[22,0,19],[22,0,27]]}
-{"tool":"fill","x1":22,"z1":18,"x2":25,"z2":29,"y":5,"height":1,"kind":"plate","color":"red"}
-{"tool":"fill","x1":22,"z1":21,"x2":25,"z2":26,"y":6,"height":3,"color":"red"}
-{"tool":"place","part":"slope_4x2","color":"glassblue","at":[[22,6,27]]}
-{"tool":"place","part":"slope_4x2","color":"red","rot":2,"at":[[22,6,19]]}
-{"tool":"fill","x1":22,"z1":21,"x2":25,"z2":25,"y":9,"height":3,"color":"red"}
-The wheels are 5 tall, so the chassis plate goes at y 5, and its middle studs grip the wheel sets. Headlights and details go on the front with place.
+Car, facing the camera, 4 wide and 14 long. Extend this idea, do not copy it: change the proportions and details to suit what was asked.
+{"tool":"place","part":"wheels_4x2","color":"darkgray","at":[[22,0,18],[22,0,28]]}
+{"tool":"fill","x1":22,"z1":17,"x2":25,"z2":30,"y":5,"height":1,"kind":"plate","color":"red"}
+{"tool":"fill","x1":22,"z1":20,"x2":25,"z2":27,"y":6,"height":3,"color":"red"}
+{"tool":"place","part":"slope_4x2","color":"red","at":[[22,6,28]]}
+{"tool":"place","part":"slope_4x2","color":"red","rot":2,"at":[[22,6,18]]}
+{"tool":"place","part":"slope_4x2","color":"glassblue","at":[[22,9,25]]}
+{"tool":"fill","x1":22,"z1":22,"x2":25,"z2":24,"y":9,"height":3,"color":"black"}
+{"tool":"place","part":"tile_1x1","color":"yellow","at":[[22,6,30],[25,6,30]]}
+{"tool":"place","part":"tile_1x1","color":"glassred","at":[[22,6,17],[25,6,17]]}
+The wheels are 5 tall, so the chassis plate goes at y 5, and its middle studs grip the wheel sets. A tile sits on the chassis studs for lights.
 
 Tree, with voxels: a brown trunk, then leaves widening and narrowing:
 {"tool":"voxels","x":22,"y":0,"z":22,"unit":"brick","layers":[["....","....",".uu.",".uu."],["....","....",".uu.",".uu."],["gggg","gggg","gggg","gggg"],["gggg","gggg","gggg","gggg"],[".gg.",".gg.",".gg.",".gg."]]}
@@ -77,7 +80,8 @@ Tree, with voxels: a brown trunk, then leaves widening and narrowing:
 Tower with battlements: walls for the body, then place brick_1x1 on every second stud around the top ring.
 
 # Making it good
-Make it recognisable at a glance, with sensible proportions and a clear silhouette. Use two to five colours, with an accent. Add a few details that bring it to life: windows, a door, a path, flowers, headlights. Prefer symmetry unless asked otherwise. Build big enough to read: most objects should be at least 10 studs across, but keep to what was asked. Think in layers from the ground up, and check each layer sits on the one below.
+Make it recognisable at a glance, with sensible proportions and a clear silhouette. Use two to five colours, with an accent. Always add details that bring it to life, using place: windows, a door, a path, flowers, headlights, a spoiler, buttons, eyes. Prefer symmetry unless asked otherwise. Build big enough to read: most objects should be at least 10 studs across and take at least 40 pieces, but keep to what was asked. Think in layers from the ground up, and check each layer sits on the one below.
+Before answering, walk through your actions once, layer by layer, and check every piece has a stud below it or above it at exactly the right height. Details are where pieces end up floating. A brick at y sits on a piece whose top is y: a brick at y 3 needs something with its top at 3, like a brick at y 0.
 When editing, use the ids and positions given in the build description.`
 
 export const SCHEMA = {

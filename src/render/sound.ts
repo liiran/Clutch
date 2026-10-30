@@ -5,6 +5,7 @@ let context: AudioContext | null = null
 let noise: AudioBuffer | null = null
 let muted = localStorage.getItem('clutch_muted') === '1'
 let lastClick = 0
+let unlocked = false
 
 export const isMuted = () => muted
 
@@ -14,7 +15,7 @@ export function setMuted(value: boolean) {
 }
 
 function ready(): AudioContext | null {
-  if (muted) return null
+  if (muted || !unlocked) return null
   try {
     context ??= new AudioContext()
     if (context.state === 'suspended') void context.resume()
@@ -61,4 +62,6 @@ export function playPaint() {
 }
 
 // The context can only start after the first gesture on the page.
-window.addEventListener('pointerdown', () => { ready() }, { once: true })
+const unlock = () => { unlocked = true; ready() }
+window.addEventListener('pointerdown', unlock, { once: true })
+window.addEventListener('keydown', unlock, { once: true })

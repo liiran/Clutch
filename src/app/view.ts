@@ -71,6 +71,12 @@ export class View {
     this.frame.frustumCulled = false
     stage.scene.add(this.frame)
 
+    this.cursor.add({ id: 1, part: 'plate_1x1', color: 'red', x: 0, y: 0, z: 0, rot: 0 })
+    this.layer.add({ id: 1, part: 'plate_1x1', color: 'red', x: 0, y: 0, z: 0, rot: 0 })
+    stage.renderer.compile(stage.scene, stage.camera)
+    this.cursor.clear()
+    this.layer.clear()
+
     store.onChange((change) => this.apply(change))
   }
 
@@ -168,6 +174,15 @@ export class View {
       this.fallTicking = false
       this.stage.removeTicker(this.fallTick)
     }
+  }
+
+  get isAnimating() { return this.falling.length > 0 }
+
+  // The ghost and the selection frame stay out of saved pictures.
+  setOverlaysVisible(show: boolean) {
+    this.cursor.group.visible = show
+    this.preview.group.visible = show
+    this.frame.visible = show && Boolean(this.frameBrick)
   }
 
   hide(id: number) { this.layer.setPose(id, 0, 0) }
@@ -307,7 +322,10 @@ export class View {
     const box = this.boundsOf(bricks)
     const corners: THREE.Vector3[] = []
     for (let k = 0; k < 8; k++) corners.push(new THREE.Vector3(k & 1 ? box.max.x : box.min.x, k & 2 ? box.max.y : box.min.y, k & 4 ? box.max.z : box.min.z))
-    if (!this.stage.canSee(corners)) void this.stage.glideTo(this.stage.fitBox(box.clone().expandByScalar(1)), 700)
+    const view = this.stage.fitBox(box.clone().expandByScalar(2), this.stage.camera.aspect, 0.8)
+    const distance = this.stage.camera.position.distanceTo(this.stage.controls.target)
+    const fitted = view.position.distanceTo(view.target)
+    if (!this.stage.canSee(corners) || distance > fitted * 1.5) void this.stage.glideTo(view, 750)
   }
 
   frameAll() {

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
-import { applyActions, verdictFor, type ApplyResult } from '../src/core/actions.ts'
+import { applyActions, repairNotes, verdictFor, type ApplyResult } from '../src/core/actions.ts'
 import { describeBuild } from '../src/core/describe.ts'
 import { Grid } from '../src/core/grid.ts'
 import { MAX_PIECES, isRot, type Brick } from '../src/core/model.ts'
@@ -100,7 +100,7 @@ export function createChatHandler(options: ApiOptions = {}) {
       // Collisions and floating pieces go back to the model once.
       if (answer.actions.length && !verdictFor(result).ok) {
         try {
-          const second = readAnswer(await ask(repairPrompt(prompt, answer, verdictFor(result).problems), controller.signal))
+          const second = readAnswer(await ask(repairPrompt(prompt, answer, repairNotes(result)), controller.signal))
           const retried = applyActions(bricks, second.actions)
           if (second.actions.length && score(retried) < score(result)) {
             answer = second

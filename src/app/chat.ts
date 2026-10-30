@@ -54,6 +54,7 @@ export class Chat {
   private bar = document.getElementById('chat-pending')!
   private barCount = document.getElementById('chat-pending-count')!
   onPreviewChange: (open: boolean) => void = () => {}
+  onAsk: () => void = () => {}
 
   constructor(store: Store, view: View, tools: Tools) {
     this.store = store
@@ -81,9 +82,9 @@ export class Chat {
     })
     document.addEventListener('keydown', (event) => {
       if (!this.pending || document.querySelector('dialog[open]')) return
-      const typing = document.activeElement === this.input && this.input.value.trim()
+      const active = document.activeElement
       if (event.key === 'Escape') this.decline()
-      else if (event.key === 'Enter' && document.activeElement !== this.input && !typing) this.accept()
+      else if (event.key === 'Enter' && (!active || active === document.body || active.tagName === 'CANVAS')) this.accept()
     })
     void this.loadStatus()
   }
@@ -173,6 +174,7 @@ export class Chat {
   async ask(text?: string) {
     const message = (text ?? this.input.value).trim()
     if (!message || this.controller) return
+    this.onAsk()
     this.closePreview()
     this.addMessage(message, 'user')
     this.input.value = ''

@@ -93,10 +93,12 @@ export class Tools {
     if (locked) {
       this.clearHover()
       this.select(null)
+      this.onHint('')
     }
     this.queueHover()
     this.refreshCursor()
     this.onState()
+    this.showModeHint()
   }
 
   get isLocked() { return this.locked }

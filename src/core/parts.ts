@@ -91,7 +91,6 @@ const ridge = (w: number) =>
 const arch = (d: number, h: number) =>
   define({
     id: `arch_1x${d}`, name: `Arch 1×${d}`, category: 'Special', w: 1, d, h, shape: 'arch',
-    solidAt: (_cx, cz, layer) => cz === 0 || cz === d - 1 || layer >= h - Math.max(1, Math.floor(h / 2)),
     bottomAt: (_cx, cz) => cz === 0 || cz === d - 1,
   })
 

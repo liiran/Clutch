@@ -9,7 +9,7 @@ export const PLATE_H = 0.4
 const GAP = 0.012      // the small gap between neighbouring pieces, which draws the seams
 const STUD_R = 0.3
 const STUD_H = 0.2
-const STUD_SEGMENTS = 14
+const STUD_SEGMENTS = 12
 
 type V3 = [number, number, number]
 
@@ -227,14 +227,14 @@ function makeSubs(def: PartDef): Sub[] {
     case 'door': {
       const frame = new Builder()
       const knob = new Builder()
-      frame.box(x0, x1, 0.005, 0.1, z0, z1)
+      frame.box(x0, x1, 0.005, 0.23, z0, z1)
       frame.box(x0, x1, top - 0.42, top, z0, z1)
-      frame.box(x0, x1, 0.08, top - 0.4, z0, z0 + 0.3)
-      frame.box(x0, x1, 0.08, top - 0.4, z1 - 0.3, z1)
+      frame.box(x0, x1, 0.21, top - 0.4, z0, z0 + 0.3)
+      frame.box(x0, x1, 0.21, top - 0.4, z1 - 0.3, z1)
       frame.studs(def, top)
       const zA = z0 + 0.29, zB = z1 - 0.29
-      body.box(-0.12, 0.12, 0.09, top - 0.41, zA, zB, 0.02)
-      const mid = (0.09 + top - 0.41) / 2
+      body.box(-0.12, 0.12, 0.22, top - 0.41, zA, zB, 0.02)
+      const mid = (0.22 + top - 0.41) / 2
       for (const x of [-1, 1]) {
         body.box(x * 0.12 - 0.015, x * 0.12 + 0.015, 0.5, mid - 0.2, zA + 0.3, zB - 0.3, 0.01)
         body.box(x * 0.12 - 0.015, x * 0.12 + 0.015, mid + 0.2, top - 0.9, zA + 0.3, zB - 0.3, 0.01)
@@ -247,8 +247,8 @@ function makeSubs(def: PartDef): Sub[] {
       for (const z of [z0 + 0.48, z1 - 0.48]) {
         body.box(-0.22, 0.22, 0.005, top, z - 0.3, z + 0.3, 0.025)
       }
-      body.box(x0, x1, 0.005, 0.12, z0, z1, 0.02)
-      body.box(-0.07, 0.07, 0.42, 0.56, z0 + 0.5, z1 - 0.5, 0.02)
+      body.box(x0, x1, 0.005, 0.23, z0, z1, 0.02)
+      body.box(-0.07, 0.07, 0.46, 0.6, z0 + 0.5, z1 - 0.5, 0.02)
       body.box(-0.07, 0.07, 0.82, 0.96, z0 + 0.5, z1 - 0.5, 0.02)
       body.studs(def, top)
       return [{ geometry: body.build() }]
@@ -260,7 +260,6 @@ function makeSubs(def: PartDef): Sub[] {
       const hubs = new Builder()
       tyres.revolve([[0, -0.41], [0.72, -0.41], [0.86, -0.41], [radius, -0.3], [radius, 0.3], [0.86, 0.41], [0.72, 0.41], [0, 0.41]], 0, 0, 0, 30)
       hubs.revolve([[0, -0.44], [0.48, -0.44], [0.52, -0.41], [0.52, 0.41], [0.48, 0.44], [0, 0.44]], 0, 0, 0, 22)
-      hubs.revolve([[0.16, -0.48], [0.16, 0.48]], 0, 0, 0, 12)
       const place = (source: THREE.BufferGeometry) => {
         const both = [-1.48, 1.48].map((x) => {
           const copy = source.clone()
@@ -275,8 +274,8 @@ function makeSubs(def: PartDef): Sub[] {
         out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3))
         return out
       }
-      body.box(-0.98, 0.98, 0.6, top, -0.98, 0.98)
-      hubs.revolve([[0.14, -1.0], [0.14, 1.0]], 0, 0, 0, 10)
+      body.box(-1.06, 1.06, 0.6, top - 0.5, -0.5, 0.5)
+      body.box(-0.98, 0.98, top - 0.52, top, -0.98, 0.98)
       body.studs(def, top)
       return [{ geometry: body.build() }, { geometry: place(tyres.build()), fixed: 0x1e2024 }, { geometry: place(hubs.build()), fixed: 0xc9ccd0 }]
     }
@@ -284,8 +283,8 @@ function makeSubs(def: PartDef): Sub[] {
     case 'flower': {
       const stem = new Builder()
       const heart = new Builder()
-      stem.revolve([[0.36, 0.005], [0.36, 0.1], [0.3, 0.14], [0, 0.14]], 0, 0, 0, 16)
-      stem.revolve([[0.055, 0.1], [0.055, 0.94]], 0, 0, 0, 8)
+      stem.revolve([[0.38, 0.005], [0.38, 0.2], [0.33, 0.24], [0, 0.24]], 0, 0, 0, 16)
+      stem.revolve([[0.055, 0.2], [0.055, 0.94]], 0, 0, 0, 8)
       for (const [x, z, a] of [[-0.14, 0, 0.5], [0.14, 0, -0.5]]) {
         stem.box(x - 0.09, x + 0.09, 0.42 + a * 0.2, 0.46 + a * 0.2, z - 0.05, z + 0.05, 0.01)
       }

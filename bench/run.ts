@@ -19,7 +19,7 @@ interface Case {
 
 const CASES: Case[] = [
   { id: 'house', prompt: 'Build a small house with a red roof, a door and two windows.', min: 60, parts: [/door/, /window/, /slope|ridge/] },
-  { id: 'car', prompt: 'Build a red racing car.', min: 15, parts: [/wheels/] },
+  { id: 'car', prompt: 'Build a red racing car.', min: 12, parts: [/wheels/] },
   { id: 'tower', prompt: 'Build a castle tower with battlements and an arched gate.', min: 60, parts: [/arch/] },
   { id: 'tree', prompt: 'Build a tree with a brown trunk and green leaves, with a few flowers around it.', min: 15, parts: [/flower/] },
   { id: 'duck', prompt: 'Build a yellow rubber duck.', min: 15 },

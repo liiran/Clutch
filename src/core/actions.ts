@@ -318,6 +318,18 @@ export function applyActions(start: readonly Brick[], actions: unknown): ApplyRe
   return { bricks, added, removed, changed, errors: s.errors, loose: s.grid.loose().filter((id) => !wasLoose.has(id)) }
 }
 
+// What a repair is told: exactly which pieces, because the model never sees new ids.
+export function repairNotes(result: ApplyResult): string[] {
+  const notes = result.errors.slice(0, 24)
+  const byId = new Map(result.bricks.map((brick) => [brick.id, brick]))
+  const loose = result.loose.map((id) => byId.get(id)!)
+  if (loose.length) {
+    const rows = loose.slice(0, 30).map((b) => `${b.part} ${b.color} rot ${b.rot} at [${b.x},${b.y},${b.z}]`)
+    notes.push(`These ${loose.length} pieces connect to nothing, directly or through other pieces, so they would float: ${rows.join('; ')}${loose.length > 30 ? '; and more' : ''}. Each piece needs a stud under one of its cells at exactly its y, or a piece gripping its studs from above, in a chain down to the baseplate. A tile, slope face, flower or ridge has no studs to grip. Move them, or add something for them to grip.`)
+  }
+  return notes
+}
+
 export interface Verdict {
   ok: boolean
   summary: string
@@ -331,8 +343,7 @@ export function verdictFor(result: ApplyResult): Verdict {
   const problems = result.errors.slice(0, 12)
   if (result.errors.length > 12) problems.push(`And ${result.errors.length - 12} more like these.`)
   if (result.loose.length) {
-    const sample = result.loose.slice(0, 12).map((id) => `#${id}`).join(', ')
-    problems.push(`${plural(result.loose.length, 'piece')} would not be attached to anything: ${sample}${result.loose.length > 12 ? ' and more' : ''}. Every piece must connect through studs back to the baseplate.`)
+    problems.push(`${plural(result.loose.length, 'piece')} would not be attached to anything.`)
   }
   const total = result.bricks.length
   if (problems.length) return { ok: false, summary: `${plural(total, 'piece')} checked, with problems.`, problems }

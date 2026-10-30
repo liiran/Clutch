@@ -33,6 +33,11 @@ const read = (): Saved[] => {
   }
 }
 
+const count = (item: Saved) => {
+  const n = item.file?.bricks?.length ?? 0
+  return `${n} ${n === 1 ? 'piece' : 'pieces'}`
+}
+
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream) {
@@ -72,6 +77,8 @@ export class Projects {
   private dialog: HTMLDialogElement
   onHint: (text: string, ms?: number) => void = () => {}
   onOpened: () => void = () => {}
+  isAnimating: () => boolean = () => false
+  showOverlays: (show: boolean) => void = () => {}
   enabled = false
 
   constructor(store: Store, stage: Stage) {
@@ -89,7 +96,10 @@ export class Projects {
   schedule() {
     if (!this.enabled) return
     window.clearTimeout(this.timer)
-    this.timer = window.setTimeout(() => this.save(), 700)
+    this.timer = window.setTimeout(() => {
+      if (this.isAnimating()) this.schedule()
+      else this.save()
+    }, 700)
   }
 
   flush() {
@@ -104,14 +114,16 @@ export class Projects {
 
   private save(forceThumb = false) {
     this.timer = 0
-    if (!this.store.count) return
     const store = this.store
+    // An empty plate is only worth saving if it used to hold something.
+    if (!store.count && !store.projectId) return
     if (!store.projectId) store.projectId = newId()
     const list = read()
     const index = list.findIndex((item) => item.id === store.projectId)
     const entry: Saved = { id: store.projectId, updatedAt: new Date().toISOString(), thumb: index >= 0 ? list[index].thumb : undefined, file: this.file() }
     const now = Date.now()
-    if (forceThumb || !entry.thumb || now - this.lastThumb > THUMB_EVERY) {
+    if (!store.count) entry.thumb = undefined
+    else if (forceThumb || !entry.thumb || now - this.lastThumb > THUMB_EVERY) {
       this.lastThumb = now
       entry.thumb = this.capture() ?? entry.thumb
     }
@@ -148,7 +160,9 @@ export class Projects {
       camera.position.copy(view.position)
       camera.lookAt(view.target)
       camera.updateMatrixWorld()
+      this.showOverlays(false)
       this.stage.renderer.render(this.stage.scene, camera)
+      this.showOverlays(true)
       const source = this.stage.canvas
       const small = document.createElement('canvas')
       small.width = 320
@@ -210,7 +224,7 @@ export class Projects {
             <div class="project-picture">${item.thumb?.startsWith('data:image/') ? `<img src="${item.thumb}" alt="" draggable="false">` : ''}</div>
             <div class="project-foot">
               <span class="project-name">${escapeHtml(item.file?.name || 'Untitled')}</span>
-              <span class="project-count">${item.file?.bricks?.length ?? 0} pieces</span>
+              <span class="project-count">${count(item)}</span>
               <button class="project-delete" data-delete="${i}" title="Delete this build" aria-label="Delete this build">${icon('trash', 13)}</button>
             </div>
           </div>`).join('')}

@@ -209,9 +209,11 @@ button:disabled { cursor: default; }
   flex-direction: column;
   flex-shrink: 0;
   min-height: 0;
-  transition: opacity 0.18s;
 }
-#sidebar.is-locked { opacity: 0.45; pointer-events: none; }
+#sidebar > * { transition: opacity 0.18s; }
+#sidebar.is-locked { pointer-events: none; }
+#sidebar.is-locked > * { opacity: 0.4; }
+html.entering #sidebar.is-locked > * { opacity: 1; }
 
 .search { position: relative; padding: 10px 10px 8px; }
 .search-icon { position: absolute; left: 20px; top: 19px; color: var(--ink-3); display: flex; pointer-events: none; }
@@ -481,7 +483,7 @@ canvas#canvas { display: block; position: absolute; inset: 0; touch-action: none
 .dock-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dock-title { font-family: var(--display); font-weight: 700; font-size: 14px; white-space: nowrap; }
 .dock-meta { font: 500 11px var(--mono); color: var(--glass-ink-2); white-space: nowrap; }
-.dock-swatches { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-width: 0; }
+.dock-swatches { display: grid; grid-template-columns: repeat(11, 15px); gap: 4px; justify-content: center; min-width: 0; }
 .dock-swatch {
   width: 15px;
   height: 15px;

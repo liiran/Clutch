@@ -13,10 +13,10 @@ import { playClick } from '../render/sound.ts'
 const LETTERS: Array<{ color: string; rows: string[] }> = [
   { color: 'red', rows: ['####', '#...', '#...', '#...', '####'] },
   { color: 'yellow', rows: ['#...', '#...', '#...', '#...', '####'] },
-  { color: 'sky', rows: ['#..#', '#..#', '#..#', '#..#', '####'] },
-  { color: 'green', rows: ['#####', '..#..', '..#..', '..#..', '..#..'] },
+  { color: 'white', rows: ['#..#', '#..#', '#..#', '#..#', '####'] },
+  { color: 'blue', rows: ['#####', '..#..', '..#..', '..#..', '..#..'] },
   { color: 'orange', rows: ['####', '#...', '#...', '#...', '####'] },
-  { color: 'white', rows: ['#..#', '#..#', '####', '#..#', '#..#'] },
+  { color: 'purple', rows: ['#..#', '#..#', '####', '#..#', '#..#'] },
 ]
 
 const TITLE_Z = 13
@@ -57,7 +57,7 @@ function labelTexture(): THREE.CanvasTexture {
   texture.anisotropy = 8
   const draw = () => {
     g.clearRect(0, 0, canvas.width, canvas.height)
-    g.font = "700 210px 'Space Grotesk', 'Inter', system-ui, sans-serif"
+    g.font = "700 250px 'Space Grotesk', 'Inter', system-ui, sans-serif"
     g.textBaseline = 'middle'
     const text = 'Start building', mark = 130, gap = 70
     const total = g.measureText(text).width + gap + mark
@@ -74,7 +74,7 @@ function labelTexture(): THREE.CanvasTexture {
     texture.needsUpdate = true
   }
   draw()
-  void document.fonts?.load("700 210px 'Space Grotesk'").then(draw, () => {})
+  void document.fonts?.load("700 250px 'Space Grotesk'").then(draw, () => {})
   return texture
 }
 
@@ -161,9 +161,9 @@ export class Home {
     const stage = this.stage
     const camera = stage.camera
     const direction = new THREE.Vector3(0, 0.5, 1).normalize()
-    const target = new THREE.Vector3(0, 1.4, 1)
+    const target = new THREE.Vector3(0, 1.6, 2)
     const corners: THREE.Vector3[] = []
-    for (const x of [-25, 25]) for (const y of [0, 8]) for (const z of [-25, 25]) corners.push(new THREE.Vector3(x, y, z))
+    for (const x of [-20, 20]) for (const y of [0, 7]) for (const z of [-13, 16]) corners.push(new THREE.Vector3(x, y, z))
     const place = (distance: number) => {
       camera.position.copy(target).addScaledVector(direction, distance)
       camera.lookAt(target)
@@ -173,7 +173,7 @@ export class Home {
       place(distance)
       return corners.every((corner) => {
         const p = corner.clone().project(camera)
-        return Math.abs(p.x) <= 0.96 && Math.abs(p.y) <= 0.9
+        return Math.abs(p.x) <= 0.97 && Math.abs(p.y) <= 0.88
       })
     }
     let near = 10, far = 300

@@ -33,6 +33,9 @@ export class Stage {
   private plateMaterial: THREE.MeshStandardMaterial
   private view = { position: new THREE.Vector3(), target: new THREE.Vector3() }
   private gliding = false
+  private glideRun = 0
+  private slowFrames = 0
+  private lastDraw = 0
   onViewChange: (() => void) | null = null
 
   constructor(canvas: HTMLCanvasElement, container: HTMLElement) {
@@ -67,7 +70,7 @@ export class Stage {
     rim.position.set(30, 22, -40)
     this.scene.add(rim)
 
-    this.plateMaterial = new THREE.MeshStandardMaterial({ color: 0x1f8f3c, roughness: 0.42 })
+    this.plateMaterial = new THREE.MeshStandardMaterial({ color: 0x1f8f3c, roughness: 0.55, envMapIntensity: 0.7 })
     this.addBench()
     this.addBaseplate()
 
@@ -78,6 +81,7 @@ export class Stage {
     })
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }
     this.controls.addEventListener('change', () => this.onControlsChange())
+    this.controls.addEventListener('start', () => { this.glideRun++; this.gliding = false })
     canvas.addEventListener('contextmenu', (event) => event.preventDefault())
 
     this.resize()
@@ -94,9 +98,9 @@ export class Stage {
     const paint = document.createElement('canvas')
     paint.width = paint.height = size
     const g = paint.getContext('2d')!
-    g.fillStyle = '#2a2d33'
+    g.fillStyle = '#17181c'
     g.fillRect(0, 0, size, size)
-    g.strokeStyle = 'rgba(255,255,255,0.05)'
+    g.strokeStyle = 'rgba(255,255,255,0.045)'
     g.lineWidth = 3
     for (let i = 0; i <= size; i += size / 8) {
       g.beginPath(); g.moveTo(i, 0); g.lineTo(i, size); g.stroke()
@@ -133,7 +137,7 @@ export class Stage {
 
   setBaseplateColor(id: string) {
     const color = COLOR.get(id)
-    if (color) this.plateMaterial.color.setHex(color.hex)
+    if (color) this.plateMaterial.color.setHex(color.hex).multiplyScalar(id === 'white' ? 0.92 : 0.82)
     this.invalidate()
   }
 
@@ -173,7 +177,24 @@ export class Stage {
       }
     }
     this.controls.update()
-    if (this.dirty || busy) this.draw(now)
+    if (this.dirty || busy) {
+      this.watchFrameRate(now)
+      this.draw(now)
+    }
+  }
+
+  // If drawing keeps falling well behind on a high-density screen, it drops to one
+  // pixel per point, which is the biggest saving there is and hardly shows in motion.
+  private watchFrameRate(now: number) {
+    const gap = now - this.lastDraw
+    this.lastDraw = now
+    if (gap > 200) return // it was idle, not slow
+    this.slowFrames = gap > 30 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1)
+    if (this.slowFrames > 25 && this.renderer.getPixelRatio() > 1) {
+      this.slowFrames = 0
+      this.renderer.setPixelRatio(1)
+      this.resize()
+    }
   }
 
   private draw(now = performance.now()) {
@@ -207,13 +228,13 @@ export class Stage {
 
   // The view that shows the whole baseplate for the canvas's current shape.
   defaultView(aspect = this.camera.aspect) {
-    return this.fitBox(new THREE.Box3(new THREE.Vector3(-OFF, -0.2, -OFF), new THREE.Vector3(OFF, 1, OFF)), aspect, 0.9)
+    return this.fitBox(new THREE.Box3(new THREE.Vector3(-OFF, -0.2, -OFF), new THREE.Vector3(OFF, 1, OFF)), aspect, 0.94)
   }
 
   // Backs a camera away along the editor's three-quarter angle until the box fits.
   fitBox(box: THREE.Box3, aspect = this.camera.aspect, margin = 0.86) {
     const target = box.getCenter(new THREE.Vector3())
-    const direction = new THREE.Vector3(-0.42, 0.8, 1).normalize()
+    const direction = new THREE.Vector3(-0.3, 0.86, 1).normalize()
     const probe = this.camera.clone()
     probe.aspect = aspect
     probe.updateProjectionMatrix()
@@ -239,8 +260,10 @@ export class Stage {
 
   glideTo(view: { position: THREE.Vector3; target: THREE.Vector3 }, ms = 650): Promise<void> {
     const p0 = this.camera.position.clone(), t0 = this.controls.target.clone()
+    const run = ++this.glideRun
     this.gliding = true
     return this.tween(this.reducedMotion ? 0 : ms, (k) => {
+      if (run !== this.glideRun) return
       const e = easeInOutCubic(k)
       this.camera.position.lerpVectors(p0, view.position, e)
       this.controls.target.lerpVectors(t0, view.target, e)
