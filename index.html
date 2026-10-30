@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clutch</title>
+  <meta name="description" content="Build with bricks in your browser. Describe what you want and watch it snap together." />
+  <meta name="theme-color" content="#25282e" />
+  <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+  <script>
+    if (!/[?&]edit\b/.test(location.search) && !location.hash.startsWith('#build=')) document.documentElement.classList.add('scene')
+  </script>
+</head>
+<body>
+<a id="skip-link" class="skip-link" href="?edit">Start building</a>
+<div id="app">
+
+  <header id="topbar">
+    <div class="topbar-left">
+      <a class="brand" href="/" title="Clutch">
+        <img class="brand-mark" src="/mark.svg" alt="" width="26" height="26" />
+        Clutch
+      </a>
+      <span class="topbar-sep">/</span>
+      <span id="name" contenteditable="true" spellcheck="false" role="textbox" aria-label="Build name" title="Click to rename">Untitled</span>
+    </div>
+
+    <div class="topbar-center">
+      <div class="seg" role="group" aria-label="View">
+        <button class="seg-btn active" data-view="build" data-icon="board" data-size="14" title="The build"> Build</button>
+        <button class="seg-btn" data-view="parts" data-icon="list" data-size="14" title="Parts list and steps"> Parts</button>
+      </div>
+      <button id="build-play" class="btn-go" title="Watch it go together, step by step" disabled data-icon="play" data-size="12"> Build</button>
+    </div>
+
+    <div class="topbar-right">
+      <button id="undo" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" data-icon="undo" data-size="15"></button>
+      <button id="redo" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-icon="redo" data-size="15"></button>
+      <span class="topbar-divider"></span>
+      <button id="open" class="btn-secondary" title="Your saved builds" data-icon="open" data-size="13"> Open</button>
+      <button id="download" class="btn-secondary" title="Download as a .clutch file" data-icon="download" data-size="13"> Download</button>
+      <button id="share" class="btn-secondary" title="Copy a link to this build" data-icon="share" data-size="13"> Share</button>
+      <span class="topbar-divider"></span>
+      <button id="mute" class="icon-btn"></button>
+      <button id="help-btn" class="icon-btn" title="Controls (?)" aria-label="Controls" data-icon="help" data-size="15"></button>
+    </div>
+  </header>
+
+  <div id="body">
+
+    <aside id="sidebar" aria-label="Parts">
+      <div class="search">
+        <span class="search-icon" data-icon="search" data-size="13"></span>
+        <input id="part-search" type="search" placeholder="Search parts" aria-label="Search parts" autocomplete="off" />
+      </div>
+      <div id="part-list">
+        <p id="part-empty" class="part-empty" hidden>No parts match that.</p>
+      </div>
+      <div class="palette-wrap">
+        <div id="palette" class="palette" role="group" aria-label="Colour"></div>
+      </div>
+    </aside>
+
+    <div id="viewport">
+      <canvas id="canvas"></canvas>
+
+      <div id="rail" class="glass" role="toolbar" aria-label="Tools">
+        <button class="rail-btn" data-mode="select" title="Select (V)" aria-label="Select" data-icon="select" data-size="17"></button>
+        <button class="rail-btn" data-mode="place" title="Place (B)" aria-label="Place" data-icon="place" data-size="17"></button>
+        <button class="rail-btn" data-mode="paint" title="Paint (P)" aria-label="Paint" data-icon="paint" data-size="17"></button>
+        <button class="rail-btn" data-mode="erase" title="Erase (E)" aria-label="Erase" data-icon="erase" data-size="17"></button>
+        <span id="rail-color" class="rail-color" title="Current colour"></span>
+      </div>
+
+      <div id="hint" class="glass is-hidden"><span id="hint-text"></span></div>
+
+      <div id="stats" class="glass" hidden>
+        <span id="count">0 pieces</span>
+        <button id="loose" class="loose" title="Show the pieces that aren't attached to anything" hidden></button>
+      </div>
+
+      <div id="empty" class="empty-state">
+        <div class="empty-title">An empty baseplate</div>
+        <div class="empty-text">Pick a part on the left and click to place it, or ask the chat to build something.</div>
+      </div>
+
+      <div id="where" class="glass" hidden></div>
+
+      <div class="view-tools">
+        <div class="base-wrap">
+          <div id="base-menu" class="glass" hidden></div>
+          <button id="base-btn" class="glass tool-btn" title="Baseplate colour" data-icon="layers" data-size="13"> Baseplate</button>
+        </div>
+        <button id="clear" class="glass tool-btn danger" title="Clear the baseplate" hidden data-icon="trash" data-size="13"> Clear</button>
+        <button id="frame" class="glass tool-btn" title="Frame the build (F)" data-icon="frame" data-size="13"> Frame</button>
+        <button id="reset" class="glass tool-btn" title="Reset the view" hidden data-icon="reset" data-size="13"> Reset view</button>
+      </div>
+
+      <div id="dock" class="glass" hidden role="dialog" aria-label="Selected piece"></div>
+
+      <div id="replay" class="glass" hidden role="group" aria-label="Build replay">
+        <div class="replay-controls">
+          <button id="replay-prev" class="replay-btn" title="Previous step (←)" aria-label="Previous step" data-icon="prev" data-size="14"></button>
+          <button id="replay-play" class="replay-btn replay-main"></button>
+          <button id="replay-next" class="replay-btn" title="Next step (→)" aria-label="Next step" data-icon="next" data-size="14"></button>
+        </div>
+        <div class="replay-main-col">
+          <div class="replay-top">
+            <span id="replay-count">Step 0</span>
+            <div id="replay-detail" class="replay-detail"></div>
+          </div>
+          <input id="replay-range" type="range" min="0" max="1" value="0" aria-label="Step" />
+        </div>
+        <button id="replay-speed" class="replay-btn replay-speed" title="Speed">1×</button>
+        <button id="replay-close" class="replay-btn" title="Stop (Esc)" aria-label="Stop" data-icon="close" data-size="15"></button>
+      </div>
+
+      <div id="help" class="glass" hidden>
+        <h3>Controls</h3>
+        <dl>
+          <dt>Left drag</dt><dd>Orbit</dd>
+          <dt>Right drag</dt><dd>Pan</dd>
+          <dt>Scroll</dt><dd>Zoom</dd>
+          <dt>V B P E</dt><dd>Select, Place, Paint, Erase</dd>
+          <dt>R</dt><dd>Rotate</dd>
+          <dt>Alt + click</dt><dd>Pick up a part and its colour</dd>
+          <dt>G / C</dt><dd>Move / copy the selected piece</dd>
+          <dt>Del</dt><dd>Delete the selected piece</dd>
+          <dt>Esc</dt><dd>Stop, or deselect</dd>
+          <dt>F</dt><dd>Frame the build</dd>
+          <dt>Ctrl+Z / Ctrl+Y</dt><dd>Undo / redo</dd>
+        </dl>
+      </div>
+    </div>
+
+    <section id="parts-view" hidden aria-label="Parts list and steps">
+      <div class="parts-inner">
+        <header class="parts-head">
+          <h2>Parts</h2>
+          <p id="parts-summary"></p>
+        </header>
+        <div class="parts-columns">
+          <div id="parts-list" class="parts-list"></div>
+          <div class="parts-steps-wrap">
+            <h3 class="section-label">Steps</h3>
+            <div id="parts-steps" class="parts-steps"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside id="chat" aria-label="Chat">
+      <div class="chat-header">
+        <span id="chat-status" class="chat-status"></span>
+        <button id="chat-new" class="icon-btn" title="New chat" aria-label="New chat" data-icon="plus" data-size="15"></button>
+      </div>
+      <div id="chat-messages">
+        <div id="chat-welcome">
+          <div class="chat-welcome-title">What should we build?</div>
+          <div class="chat-suggestions">
+            <button class="chat-suggest" data-ask="Build a small house with a red roof, a door and two windows." data-icon="house" data-size="15"><span>A small house</span></button>
+            <button class="chat-suggest" data-ask="Build a red racing car." data-icon="car" data-size="15"><span>A racing car</span></button>
+            <button class="chat-suggest" data-ask="Build a castle tower with battlements and an arched gate." data-icon="tower" data-size="15"><span>A castle tower</span></button>
+            <button class="chat-suggest" data-ask="Build a tree with a brown trunk and green leaves, with a few flowers around it." data-icon="tree" data-size="15"><span>A tree and flowers</span></button>
+          </div>
+        </div>
+      </div>
+      <div id="chat-pending" hidden>
+        <span id="chat-pending-count">Ready</span>
+        <button id="chat-decline" class="pending-decline">Discard</button>
+        <button id="chat-accept" class="pending-accept">Apply <kbd>Enter</kbd></button>
+      </div>
+      <div class="chat-input-row">
+        <div class="chat-input-box">
+          <textarea id="chat-input" rows="1" placeholder="Describe what to build…" aria-label="Message"></textarea>
+          <button id="chat-send" title="Send" aria-label="Send" data-icon="send" data-size="15"></button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <dialog id="clear-modal" class="confirm">
+    <div class="confirm-title">Clear the baseplate?</div>
+    <p class="confirm-text">Every piece comes off. Undo brings them back.</p>
+    <div class="confirm-btns">
+      <button id="clear-cancel" class="btn-secondary">Cancel</button>
+      <button id="clear-confirm" class="btn-danger">Clear</button>
+    </div>
+  </dialog>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

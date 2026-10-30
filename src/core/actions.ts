@@ -16,7 +16,7 @@ export interface ApplyResult {
   removed: Brick[]
   changed: Brick[]   // the new state of pieces that were moved or recoloured
   errors: string[]
-  loose: number[]    // ids of pieces that connect to nothing
+  loose: number[]    // ids of pieces left connected to nothing, that were not before
 }
 
 type Raw = Record<string, unknown>
@@ -273,6 +273,7 @@ function move(s: Session, list: Brick[], dx: number, dy: number, dz: number, whe
 
 export function applyActions(start: readonly Brick[], actions: unknown): ApplyResult {
   const s = new Session([...start])
+  const wasLoose = new Set(s.grid.loose())
   if (!Array.isArray(actions)) s.errors.push('The actions must be a list.')
   const list: unknown[] = Array.isArray(actions) ? actions : []
   if (list.length > MAX_ACTIONS) s.errors.push(`Only the first ${MAX_ACTIONS} actions were used.`)
@@ -314,7 +315,7 @@ export function applyActions(start: readonly Brick[], actions: unknown): ApplyRe
     return old !== undefined && old !== brick
   })
   const removed = start.filter((brick) => !s.grid.bricks.has(brick.id))
-  return { bricks, added, removed, changed, errors: s.errors, loose: s.grid.loose() }
+  return { bricks, added, removed, changed, errors: s.errors, loose: s.grid.loose().filter((id) => !wasLoose.has(id)) }
 }
 
 export interface Verdict {
