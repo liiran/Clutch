@@ -17,6 +17,7 @@ const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg'
 const OUT = new URL('../docs/media/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 mkdirSync(OUT, { recursive: true })
 
+const MAX_GIF_MB = 15
 const FIRST_REQUEST = 'Build a small house with a red roof, a door and two windows.'
 const SECOND_REQUEST = 'Now add a garden: a path to the door, a tree on each side of the house and a fence along the front.'
 
@@ -87,14 +88,18 @@ class Recorder {
     const listFile = join(this.dir, 'list.txt')
     writeFileSync(listFile, list)
     const run = (args: string[]) => {
-      const result = spawnSync(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', listFile, ...args], { encoding: 'utf8' })
+      const result = spawnSync(FFMPEG, ['-y', '-loglevel', 'error', ...args], { encoding: 'utf8' })
       if (result.status !== 0) throw new Error(`ffmpeg failed: ${result.stderr || result.error}`)
     }
-    const gif = join(OUT, `${name}.gif`)
-    run(['-vf', `fps=${fps},scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`, gif])
     const mp4 = join(OUT, `${name}.mp4`)
-    run(['-vf', 'fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p', '-c:v', 'libx264', '-crf', '23', '-preset', 'slow', '-movflags', '+faststart', mp4])
-    console.log(`${name}: ${(statSync(gif).size / 1e6).toFixed(1)} MB gif, ${(statSync(mp4).size / 1e6).toFixed(1)} MB mp4, ${frames.length} frames`)
+    run(['-f', 'concat', '-safe', '0', '-i', listFile, '-vf', 'fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p', '-c:v', 'libx264', '-crf', '23', '-preset', 'slow', '-movflags', '+faststart', mp4])
+    // The GIF comes from the video, whose frames repeat cleanly. From the raw frames, every
+    // frame differs a little and the file can come out ten times the size.
+    const gif = join(OUT, `${name}.gif`)
+    run(['-i', mp4, '-vf', `fps=${fps},scale=${width}:-1:flags=lanczos,mpdecimate=hi=512:lo=256:frac=0.1,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=none:diff_mode=rectangle`, gif])
+    const size = statSync(gif).size / 1e6
+    if (size > MAX_GIF_MB) throw new Error(`${name}.gif is ${size.toFixed(0)} MB, over the ${MAX_GIF_MB} MB limit. Do not commit it.`)
+    console.log(`${name}: ${size.toFixed(1)} MB gif, ${(statSync(mp4).size / 1e6).toFixed(1)} MB mp4, ${frames.length} frames`)
   }
 
   clean() { rmSync(this.dir, { recursive: true, force: true }) }
@@ -247,7 +252,7 @@ async function hero() {
   }, { timeout: 30000, polling: 100 })
   await wait(350)
   await record.stop()
-  record.encode('demo', 800, 10)
+  record.encode('demo', 720, 10)
   record.clean()
 
   await page.keyboard.press('Escape')
