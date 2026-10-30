@@ -325,13 +325,6 @@ export function subsFor(part: string): Sub[] {
   return subs
 }
 
-// A wedge for the landing page's car: it rises toward -z, the way the model's front faces.
-export function rampGeometry(w: number, d: number, h: number): THREE.BufferGeometry {
-  const builder = new Builder()
-  builder.prism([[d / 2, 0.005], [-d / 2, h], [-d / 2, 0.005]], -w / 2, w / 2)
-  return builder.build()
-}
-
 // A landing page brick: any size, with studs only on the given columns.
 export function pieceGeometry(w: number, d: number, h: number, openColumns: number[]): THREE.BufferGeometry {
   const builder = new Builder()

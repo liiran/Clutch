@@ -3,7 +3,7 @@
 **Build with bricks in your browser. Describe what you want, check the preview, and watch it snap together.**
 
 <p align="center">
-  <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed, a request for a small house appears as a translucent preview and drops into place when applied, a second request adds a path, trees and a fence, and then the Replay button plays the model going together." width="800">
+  <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed, a request for a small house appears as a translucent preview that is dragged to a new spot and drops into place when applied, a second request adds a path, trees and a fence, and then the Replay button plays the model going together." width="800">
 </p>
 
 <p align="center"><em>A real recording: one request builds a house, a second adds a garden to it, and Replay plays it back. <a href="docs/media/demo.mp4">Sharper video (MP4)</a>.</em></p>
@@ -20,8 +20,6 @@ npm run dev
 Then open **http://127.0.0.1:5173/** in your browser. On Windows, you can double-click `start-local.bat` instead, which installs what is missing and opens the page for you.
 
 Clutch only runs on your own computer for now.
-
-The menu has a little car to play with: drive it with W, A, S and D, jump the ramps and bounce off the letters.
 
 ## Ask the chat to build
 

@@ -39,6 +39,7 @@ class Recorder {
   cuts: Cut[] = []
   private dir = mkdtempSync(join(tmpdir(), 'clutch-media-'))
   private client!: CDPSession
+  private stopped = false
   private page: Page
 
   constructor(page: Page) { this.page = page }
@@ -46,6 +47,7 @@ class Recorder {
   async start() {
     this.client = await this.page.createCDPSession()
     this.client.on('Page.screencastFrame', (event) => {
+      if (this.stopped) return
       const file = join(this.dir, `${String(this.frames.length).padStart(6, '0')}.jpg`)
       writeFileSync(file, Buffer.from(event.data, 'base64'))
       this.frames.push({ time: Date.now(), file })
@@ -55,6 +57,7 @@ class Recorder {
   }
 
   async stop() {
+    this.stopped = true
     await this.client.send('Page.stopScreencast')
   }
 
@@ -172,7 +175,7 @@ async function hero() {
 
   const at = await page.evaluate(() => {
     const { stage } = (window as any).clutch
-    const p = stage.camera.position.clone().set(0, 1.4, 14.5).project(stage.camera)
+    const p = stage.camera.position.clone().set(0, 1.4, 9.5).project(stage.camera)
     const rect = stage.canvas.getBoundingClientRect()
     return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
   })
@@ -198,8 +201,24 @@ async function hero() {
   }
 
   await ask(FIRST_REQUEST)
-  await wait(1300)
+  await wait(1200)
   await still(page, 'preview')
+
+  // Dragging the preview to a different spot before applying it.
+  const grab = await page.evaluate(() => {
+    const { stage, view, chat } = (window as any).clutch
+    const box = view.boundsOf(chat.mover.placing.current)
+    const p = stage.camera.position.clone().set((box.min.x + box.max.x) / 2, box.max.y * 0.55, box.max.z).project(stage.camera)
+    const rect = stage.canvas.getBoundingClientRect()
+    return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
+  })
+  await glide(page, grab.x, grab.y, 420)
+  await wait(120)
+  await page.mouse.down()
+  await glide(page, grab.x - 90, grab.y + 22, 650)
+  await glide(page, grab.x + 60, grab.y - 8, 700)
+  await page.mouse.up()
+  await wait(350)
   await clickOn(page, '#chat-accept', 420)
   await wait(2900)
 
