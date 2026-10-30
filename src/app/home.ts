@@ -50,10 +50,8 @@ function titleBricks(): Brick[][] {
     garden.push({ id: id++, part, color, x: px, y, z: pz, rot: 0 })
   }
   for (const [tx, tz] of [[3, 11], [43, 13]]) {
-    put('round_1x1', 'brown', tx, 0, tz)
-    put('round_1x1', 'brown', tx, 3, tz)
-    put('plate_2x2', 'forest', tx, 6, tz)
-    put('cone_2x2', 'green', tx, 7, tz)
+    put('round_2x2', 'brown', tx, 0, tz)
+    put('cone_2x2', 'green', tx, 3, tz)
   }
   const flowers: Array<[string, number, number]> = [['red', 6, 15], ['pink', 2, 16], ['yellow', 7, 12], ['purple', 40, 16], ['white', 45, 17], ['orange', 41, 12]]
   for (const [color, fx, fz] of flowers) put('flower_1x1', color, fx, 0, fz)
