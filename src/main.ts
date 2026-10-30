@@ -294,8 +294,12 @@ let warmed = false
 function warmUp() {
   if (warmed) return
   warmed = true
-  sidebar.startDrawing()
-  view.warmUp()
+  const start = () => {
+    sidebar.startDrawing()
+    view.warmUp()
+  }
+  if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 800 })
+  else start()
 }
 
 const shared = location.hash.startsWith('#build=')

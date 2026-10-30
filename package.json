@@ -12,6 +12,7 @@
     "bench": "node --experimental-strip-types bench/run.ts",
     "perf": "node --experimental-strip-types tests/e2e/perf.ts",
     "load": "node --experimental-strip-types tests/e2e/load.ts",
+    "landing": "node --experimental-strip-types tests/e2e/landing.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

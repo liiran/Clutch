@@ -4,12 +4,16 @@
 
 import * as THREE from 'three'
 import { PART, type PartDef } from '../core/parts.ts'
+import { MAX_LEVEL, STARTING_LEVEL } from './quality.ts'
 
 export const PLATE_H = 0.4
 const GAP = 0.012      // the small gap between neighbouring pieces, which draws the seams
 const STUD_R = 0.3
 const STUD_H = 0.2
-const STUD_SEGMENTS = 12
+const LOW = STARTING_LEVEL >= MAX_LEVEL - 1
+const STUD_SEGMENTS = LOW ? 6 : 10
+const ROUND = LOW ? 0.7 : 1 // scales the sides on round parts
+const sides = (count: number) => Math.max(6, Math.round(count * ROUND))
 
 type V3 = [number, number, number]
 
@@ -74,6 +78,22 @@ class Builder {
     }
   }
 
+  // The cheap everyday body: straight sides, a bevelled top edge and a flat underside.
+  block(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, c = 0.035) {
+    const inside: V3 = [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]
+    const low = y1 - c
+    const a: V3[] = [[x0, low, z0], [x1, low, z0], [x1, low, z1], [x0, low, z1]]
+    const b: V3[] = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]]
+    const t: V3[] = [[x0 + c, y1, z0 + c], [x1 - c, y1, z0 + c], [x1 - c, y1, z1 - c], [x0 + c, y1, z1 - c]]
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4
+      this.quad(b[i], b[j], a[j], a[i], inside)
+      this.quad(a[i], a[j], t[j], t[i], inside)
+    }
+    this.quad(t[0], t[1], t[2], t[3], inside)
+    this.quad(b[0], b[1], b[2], b[3], inside)
+  }
+
   // Turns a profile of [radius, height] points around the y axis. List the points
   // from bottom to top along the outside, and the normals point outward.
   revolve(profile: Array<[number, number]>, cx: number, y0: number, cz: number, segments: number) {
@@ -118,7 +138,7 @@ class Builder {
   }
 
   stud(x: number, y: number, z: number, radius = STUD_R) {
-    this.revolve([[radius, 0], [radius, STUD_H - 0.03], [radius - 0.03, STUD_H], [0, STUD_H]], x, y, z, STUD_SEGMENTS)
+    this.revolve([[radius, 0], [radius, STUD_H], [0, STUD_H]], x, y, z, STUD_SEGMENTS)
   }
 
   studs(def: PartDef, top: number) {
@@ -146,7 +166,7 @@ function arch(def: PartDef, top: number): THREE.BufferGeometry {
   shape.lineTo(-half, top)
   shape.closePath()
   const depth = def.w - GAP * 2
-  const solid = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 14 })
+  const solid = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 8 })
   solid.translate(0, 0, -depth / 2)
   solid.rotateY(Math.PI / 2)
   const flat = solid.index ? solid.toNonIndexed() : solid
@@ -170,12 +190,12 @@ function makeSubs(def: PartDef): Sub[] {
 
   switch (def.shape) {
     case 'box':
-      body.box(x0, x1, 0.005, top, z0, z1)
+      body.block(x0, x1, 0.005, top, z0, z1)
       body.studs(def, top)
       return [{ geometry: body.build() }]
 
     case 'tile':
-      body.box(x0, x1, 0.005, top - 0.008, z0, z1, 0.03)
+      body.block(x0, x1, 0.005, top - 0.008, z0, z1, 0.03)
       return [{ geometry: body.build() }]
 
     case 'slope': {
@@ -196,7 +216,7 @@ function makeSubs(def: PartDef): Sub[] {
 
     case 'round': {
       const r = def.w / 2 - GAP - 0.01
-      body.revolve([[0, 0.005], [r - 0.02, 0.005], [r, 0.03], [r, top - 0.03], [r - 0.03, top], [0, top]], 0, 0, 0, def.w > 1 ? 40 : 26)
+      body.revolve([[r, 0.005], [r, top - 0.03], [r - 0.03, top], [0, top]], 0, 0, 0, sides(def.w > 1 ? 24 : 14))
       body.studs(def, top)
       return [{ geometry: body.build() }]
     }
@@ -204,7 +224,7 @@ function makeSubs(def: PartDef): Sub[] {
     case 'cone': {
       const r = def.w / 2 - GAP - 0.01
       const tip = def.w > 1 ? 0.14 : 0.3
-      body.revolve([[0, 0.005], [r, 0.005], [r, 0.14], [tip, top - (def.w > 1 ? 0.02 : 0)], [0, top]], 0, 0, 0, def.w > 1 ? 36 : 26)
+      body.revolve([[r, 0.005], [r, 0.14], [tip, top], [0, top]], 0, 0, 0, sides(def.w > 1 ? 20 : 12))
       body.studs(def, top)
       return [{ geometry: body.build() }]
     }
@@ -235,11 +255,7 @@ function makeSubs(def: PartDef): Sub[] {
       const zA = z0 + 0.29, zB = z1 - 0.29
       body.box(-0.12, 0.12, 0.22, top - 0.41, zA, zB, 0.02)
       const mid = (0.22 + top - 0.41) / 2
-      for (const x of [-1, 1]) {
-        body.box(x * 0.12 - 0.015, x * 0.12 + 0.015, 0.5, mid - 0.2, zA + 0.3, zB - 0.3, 0.01)
-        body.box(x * 0.12 - 0.015, x * 0.12 + 0.015, mid + 0.2, top - 0.9, zA + 0.3, zB - 0.3, 0.01)
-        knob.revolve([[0.075, -0.075], [0.09, 0], [0.075, 0.075], [0, 0.09]], x * 0.17, mid - 0.05, zB - 0.3, 14)
-      }
+      for (const x of [-1, 1]) knob.revolve([[0.09, -0.08], [0.09, 0.08], [0, 0.09]], x * 0.17, mid - 0.05, zB - 0.3, 8)
       return [{ geometry: body.build() }, { geometry: frame.build(), fixed: 0xf4f4f0 }, { geometry: knob.build(), fixed: 0xd4a93a }]
     }
 
@@ -258,8 +274,8 @@ function makeSubs(def: PartDef): Sub[] {
       const radius = 0.96
       const tyres = new Builder()
       const hubs = new Builder()
-      tyres.revolve([[0, -0.41], [0.72, -0.41], [0.86, -0.41], [radius, -0.3], [radius, 0.3], [0.86, 0.41], [0.72, 0.41], [0, 0.41]], 0, 0, 0, 30)
-      hubs.revolve([[0, -0.44], [0.48, -0.44], [0.52, -0.41], [0.52, 0.41], [0.48, 0.44], [0, 0.44]], 0, 0, 0, 22)
+      tyres.revolve([[0, -0.41], [0.86, -0.41], [radius, -0.3], [radius, 0.3], [0.86, 0.41], [0, 0.41]], 0, 0, 0, sides(20))
+      hubs.revolve([[0, -0.44], [0.52, -0.44], [0.52, 0.44], [0, 0.44]], 0, 0, 0, sides(14))
       const place = (source: THREE.BufferGeometry) => {
         const both = [-1.48, 1.48].map((x) => {
           const copy = source.clone()
@@ -283,16 +299,16 @@ function makeSubs(def: PartDef): Sub[] {
     case 'flower': {
       const stem = new Builder()
       const heart = new Builder()
-      stem.revolve([[0.38, 0.005], [0.38, 0.2], [0.33, 0.24], [0, 0.24]], 0, 0, 0, 16)
-      stem.revolve([[0.055, 0.2], [0.055, 0.94]], 0, 0, 0, 8)
+      stem.revolve([[0.38, 0.005], [0.38, 0.24], [0, 0.24]], 0, 0, 0, 10)
+      stem.revolve([[0.055, 0.2], [0.055, 0.94]], 0, 0, 0, 5)
       for (const [x, z, a] of [[-0.14, 0, 0.5], [0.14, 0, -0.5]]) {
         stem.box(x - 0.09, x + 0.09, 0.42 + a * 0.2, 0.46 + a * 0.2, z - 0.05, z + 0.05, 0.01)
       }
       for (let i = 0; i < 5; i++) {
         const t = (i / 5) * Math.PI * 2 + Math.PI / 10
-        body.revolve([[0, 0], [0.13, 0.015], [0.17, 0.06], [0.13, 0.11], [0, 0.12]], Math.cos(t) * 0.22, 0.9, Math.sin(t) * 0.22, 12)
+        body.revolve([[0.17, 0], [0.17, 0.07], [0, 0.1]], Math.cos(t) * 0.22, 0.9, Math.sin(t) * 0.22, 7)
       }
-      heart.revolve([[0, 0], [0.14, 0.02], [0.14, 0.1], [0.08, 0.15], [0, 0.16]], 0, 0.9, 0, 14)
+      heart.revolve([[0.14, 0], [0.14, 0.12], [0, 0.15]], 0, 0.9, 0, 7)
       return [{ geometry: body.build() }, { geometry: stem.build(), fixed: 0x1f8f3c }, { geometry: heart.build(), fixed: 0xf7d117 }]
     }
   }
@@ -309,10 +325,14 @@ export function subsFor(part: string): Sub[] {
   return subs
 }
 
-// The baseplate's studs: fewer sides than a piece's, because there are thousands.
-export function baseplateStud(): THREE.BufferGeometry {
+// A landing page brick: any size, with studs only on the given columns.
+export function pieceGeometry(w: number, d: number, h: number, openColumns: number[]): THREE.BufferGeometry {
   const builder = new Builder()
-  builder.revolve([[STUD_R, -0.01], [STUD_R, STUD_H - 0.03], [STUD_R - 0.03, STUD_H], [0, STUD_H]], 0, 0, 0, 10)
+  const top = h * PLATE_H
+  builder.block(-w / 2 + GAP, w / 2 - GAP, 0.005, top, -d / 2 + GAP, d / 2 - GAP)
+  for (const c of openColumns) {
+    for (let z = 0; z < d; z++) builder.stud(c + 0.5 - w / 2, top - 0.005, z + 0.5 - d / 2)
+  }
   return builder.build()
 }
 
@@ -325,7 +345,7 @@ export function plainBox(x0: number, x1: number, y0: number, y1: number, z0: num
 export function studsOn(positions: Array<[number, number, number]>, radius: number, height: number): THREE.BufferGeometry {
   const builder = new Builder()
   for (const [x, y, z] of positions) {
-    builder.revolve([[radius, 0], [radius, height - 0.05], [radius - 0.05, height], [0, height]], x, y, z, 24)
+    builder.revolve([[radius, 0], [radius, height - 0.05], [radius - 0.05, height], [0, height]], x, y, z, 16)
   }
   return builder.build()
 }

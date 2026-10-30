@@ -2,31 +2,25 @@
 // what lands on the baseplate. One small renderer draws them all in a single pass.
 
 import * as THREE from 'three'
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { COLOR } from '../core/colors.ts'
 import { PART } from '../core/parts.ts'
 import { subsFor } from './geometry.ts'
 
-const SIZE = 128
+const SIZE = 112
 
 let renderer: THREE.WebGLRenderer | null = null
 let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
-const solid = new THREE.MeshStandardMaterial({ roughness: 0.3 })
-const clear = new THREE.MeshStandardMaterial({ roughness: 0.08, transparent: true, opacity: 0.55, depthWrite: false })
+const solid = new THREE.MeshPhongMaterial({ shininess: 45, specular: 0x333333 })
+const clear = new THREE.MeshPhongMaterial({ shininess: 90, specular: 0x666666, transparent: true, opacity: 0.55, depthWrite: false })
 
 function setup() {
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, stencil: false })
   renderer.setSize(SIZE, SIZE, false)
-  renderer.toneMapping = THREE.NeutralToneMapping
   renderer.setClearColor(0x000000, 0)
   scene = new THREE.Scene()
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-  scene.environmentIntensity = 0.6
-  pmrem.dispose()
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.6))
-  const key = new THREE.DirectionalLight(0xffffff, 2.1)
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x9a9aa8, 2.0))
+  const key = new THREE.DirectionalLight(0xffffff, 2.3)
   key.position.set(-3, 7, 4)
   scene.add(key)
   camera = new THREE.PerspectiveCamera(24, 1, 0.1, 200)

@@ -53,7 +53,7 @@ export class BrickLayer {
       mesh.count = pool.ids.length
       mesh.frustumCulled = false
       mesh.renderOrder = order
-      const opaque = !(material as THREE.MeshStandardMaterial).transparent
+      const opaque = !material.transparent
       mesh.castShadow = this.shadows && opaque
       mesh.receiveShadow = this.shadows && opaque
       mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 3)
@@ -199,8 +199,8 @@ export const WHITE_TINT = new THREE.Color(0xffffff)
 
 // The materials for real pieces. Tints and colours come from each instance.
 export function solidMaterials() {
-  const body = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0 })
-  const glass = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.5, depthWrite: false })
+  const body = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 45, specular: 0x333333 })
+  const glass = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x666666, transparent: true, opacity: 0.5, depthWrite: false })
   return (sub: Sub, glassBody: boolean): THREE.Material[] => [sub.glass || (glassBody && sub.fixed === undefined) ? glass : body]
 }
 
@@ -208,7 +208,7 @@ export function solidMaterials() {
 // tangle of the faces behind them.
 export function ghostMaterials(opacity: number) {
   const depth = new THREE.MeshBasicMaterial({ colorWrite: false })
-  const ghost = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, transparent: true, opacity, depthWrite: false, depthFunc: THREE.LessEqualDepth })
+  const ghost = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity, depthWrite: false, depthFunc: THREE.LessEqualDepth })
   const set = (_sub: Sub): THREE.Material[] => [depth, ghost]
   return { set, ghost }
 }

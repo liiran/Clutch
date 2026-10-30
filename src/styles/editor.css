@@ -20,8 +20,8 @@
   --go: #16a34a;
   --go-hover: #15803d;
   --stop: #dc2626;
-  --canvas: #25282e;
-  --glass: rgba(22, 24, 29, 0.76);
+  --canvas: #1d1f24;
+  --glass: rgba(26, 28, 33, 0.93);
   --glass-line: rgba(255, 255, 255, 0.1);
   --glass-ink: #eef0f3;
   --glass-ink-2: #a9afb9;
@@ -324,8 +324,6 @@ html.ready canvas#canvas { opacity: 1; }
   color: var(--glass-ink);
   background: var(--glass);
   border: 1px solid var(--glass-line);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 #rail {

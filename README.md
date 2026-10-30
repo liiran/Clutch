@@ -87,6 +87,8 @@ The model works in big actions (`walls`, `fill`, `roof`, `voxels`) and exact one
 | 3D | Three.js. One instanced mesh per part, so a large build is a few dozen draw calls |
 | Hover | A ray walked through the occupancy grid, so its cost does not grow with the build |
 | Drawing | Only when something changed, and shadows only when the build changes |
+| Light by design | Simple lighting, painted baseplate studs, low-detail models and no blur over the 3D view |
+| Slow devices | Quality steps down by itself when drawing falls behind, and remembers for next time |
 | Build and dev server | Vite |
 
 ```
@@ -109,6 +111,7 @@ bench/         real requests through the real chat, with a picture of each resul
 npm test            # the rules, the server and the CLI adapter
 npm run test:e2e    # the real editor in Chrome (needs npm run dev running)
 npm run perf        # frame times on a 3000 piece build
+npm run landing     # what the landing page costs (CLUTCH_SOFTWARE=1 for no GPU)
 npm run bench       # real prompts through the real model, with pictures
 npm run build       # type checks and a production build
 ```
