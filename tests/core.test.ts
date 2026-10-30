@@ -9,6 +9,7 @@ import { planSteps, countParts } from '../src/core/steps.ts'
 import { fromFile, toFile } from '../src/core/file.ts'
 import { describeBuild } from '../src/core/describe.ts'
 import { alignTo, holdStud } from '../src/core/snap.ts'
+import { CAR_RADIUS, floorAt, isResting, newCar, speedOf, stepCar, type World } from '../src/core/drive.ts'
 import type { Brick } from '../src/core/model.ts'
 
 const brick = (id: number, part: string, x: number, y: number, z: number, rot: 0 | 1 | 2 | 3 = 0): Brick => ({ id, part, color: 'red', x, y, z, rot })
@@ -304,6 +305,113 @@ test('a build saved on the old 48 stud plate moves to the middle of the new one'
   const saved = toFile('New', 'green', old.bricks)
   assert.equal(saved.version, 2)
   assert.deepEqual(fromFile(saved).bricks.map((b) => [b.x, b.z]), [[8, 8], [55, 55]], 'and only once')
+})
+
+const flat: World = { boxes: [], ramps: [], bound: 30 }
+const drive = (world: World, car: ReturnType<typeof newCar>, throttle: number, steer: number, seconds: number) => {
+  let hardest = 0
+  for (let t = 0; t < seconds; t += 1 / 60) hardest = Math.max(hardest, stepCar(car, { throttle, steer }, world, 1 / 60))
+  return hardest
+}
+
+test('the car drives forward and reverses the way it faces, and coasts to a stop', () => {
+  const car = newCar(0, 0, 0)
+  drive(flat, car, 1, 0, 0.5)
+  assert.ok(car.z > 1 && Math.abs(car.x) < 0.001, 'heading 0 is +z')
+  drive(flat, car, 0, 0, 8)
+  assert.equal(isResting(car), true)
+  const back = newCar(0, 0, 0)
+  drive(flat, back, -1, 0, 0.5)
+  assert.ok(back.z < -0.5)
+})
+
+test('the car only turns while rolling, and left is left', () => {
+  const parked = newCar(0, 0, Math.PI)
+  drive(flat, parked, 0, 1, 1)
+  assert.equal(parked.heading, Math.PI)
+  const car = newCar(0, 20, Math.PI) // facing -z, away from the camera
+  drive(flat, car, 1, 1, 0.8)
+  assert.ok(car.x < -0.5, 'steering left heads toward -x')
+})
+
+test('the car bounces off a wall instead of going through, even flat out', () => {
+  const world: World = { boxes: [{ x0: -5, x1: 5, z0: 10, z1: 11, y0: 0, h: 6 }], ramps: [], bound: 30 }
+  const car = newCar(0, 0, 0)
+  const hit = drive(world, car, 1, 0, 3)
+  assert.ok(hit > 3, 'it hit something')
+  assert.ok(car.z <= 10 - CAR_RADIUS + 0.01, `stays in front of it: ${car.z}`)
+})
+
+test('the car passes under something high, and is stopped by something low', () => {
+  const arch: World = { boxes: [{ x0: -5, x1: 5, z0: 10, z1: 11, y0: 4, h: 6 }], ramps: [], bound: 30 }
+  const car = newCar(0, 0, 0)
+  drive(arch, car, 1, 0, 2)
+  assert.ok(car.z > 12, 'through underneath')
+})
+
+test('the car never leaves the plate, whatever is pressed', () => {
+  const car = newCar(0, 0, 0.7)
+  for (let i = 0; i < 40; i++) {
+    drive(flat, car, 1, i % 3 === 0 ? 1 : i % 3 === 1 ? -1 : 0, 0.5)
+    assert.ok(Math.abs(car.x) <= 30 && Math.abs(car.z) <= 30)
+    assert.ok(Number.isFinite(car.x + car.y + car.z + car.heading + car.vx + car.vz))
+  }
+})
+
+test('a ramp launches the car, and it lands', () => {
+  const world: World = { boxes: [], ramps: [{ x0: -3, x1: 3, z0: 10, z1: 17, h: 1.9, rise: 'z+' }], bound: 60 }
+  const car = newCar(0, -5, 0)
+  let highest = 0, airborne = false
+  for (let t = 0; t < 3.5; t += 1 / 60) {
+    stepCar(car, { throttle: 1, steer: 0 }, world, 1 / 60)
+    highest = Math.max(highest, car.y)
+    airborne ||= !car.grounded && car.y > 0.5
+  }
+  assert.equal(airborne, true, 'it left the ground')
+  assert.ok(highest > 1.9, `it flew above the top of the ramp: ${highest}`)
+  assert.equal(car.y, 0, 'and came back down')
+  assert.equal(car.grounded, true)
+})
+
+test('the tall end of a ramp is a wall from behind', () => {
+  const world: World = { boxes: [], ramps: [{ x0: -3, x1: 3, z0: 10, z1: 17, h: 1.9, rise: 'z-' }], bound: 60 }
+  const car = newCar(0, 0, 0)
+  const hit = drive(world, car, 1, 0, 2)
+  assert.ok(hit > 3)
+  assert.ok(car.z < 10.5)
+  assert.equal(car.y, 0)
+  assert.ok(floorAt(world, 0, 10, 0) > 1.8)
+})
+
+test('the car can land on something low, then drive off it', () => {
+  const world: World = { boxes: [{ x0: -6, x1: 6, z0: -6, z1: 6, y0: 0, h: 1.4 }], ramps: [], bound: 30 }
+  const car = newCar(0, 0, 0, 8)
+  drive(world, car, 0, 0, 2)
+  assert.equal(car.y, 1.4)
+  drive(world, car, 1, 0, 1.5)
+  assert.ok(car.z > 6 && car.y < 1.4, 'off the edge and falling')
+  // From the ground, it is a wall.
+  const low = newCar(0, -15, 0)
+  drive(world, low, 1, 0, 2)
+  assert.ok(low.z < -6, 'cannot climb it')
+})
+
+test('hammering every key among obstacles never breaks the car', () => {
+  const world: World = {
+    boxes: [{ x0: -4, x1: 4, z0: -12, z1: -10, y0: 0, h: 6 }, { x0: -16, x1: 16, z0: 5, z1: 14, y0: 0, h: 1.4 }, { x0: 10, x1: 11, z0: -5, z1: -4, y0: 0, h: 6 }],
+    ramps: [{ x0: 18, x1: 24, z0: -2, z1: 5, h: 1.9, rise: 'z-' }, { x0: -20, x1: -13, z0: -10, z1: -4, h: 1.9, rise: 'x+' }],
+    bound: 30,
+  }
+  const car = newCar(21, 13, Math.PI)
+  let seed = 7
+  const next = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  for (let i = 0; i < 400; i++) {
+    drive(world, car, next() < 0.75 ? 1 : next() < 0.5 ? -1 : 0, next() < 0.33 ? 1 : next() < 0.5 ? -1 : 0, 0.15 + next() * 0.3)
+    assert.ok(Number.isFinite(car.x + car.y + car.z + car.vx + car.vy + car.vz + car.heading), 'numbers stay real')
+    assert.ok(Math.abs(car.x) <= 30.001 && Math.abs(car.z) <= 30.001, 'on the plate')
+    assert.ok(car.y >= -0.001 && car.y < 15, `sane height: ${car.y}`)
+    assert.ok(speedOf(car) < 45, 'sane speed')
+  }
 })
 
 test('the description lists ids and positions', () => {

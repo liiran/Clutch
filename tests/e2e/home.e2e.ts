@@ -12,7 +12,7 @@ let page: OpenPage
 // Where the middle of the button is on screen.
 const buttonAt = () => page.evaluate(() => {
   const { stage } = (window as any).clutch
-  const p = stage.camera.position.clone().set(0, 1.4, 9.5).project(stage.camera)
+  const p = stage.camera.position.clone().set(0, 1.4, 14.5).project(stage.camera)
   const rect = stage.canvas.getBoundingClientRect()
   return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
 })
@@ -42,6 +42,51 @@ test('the landing shows only the scene, and sliding off the button cancels', asy
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('scene')), true, 'still on the landing')
 })
 
+const car = () => page.evaluate(() => (window as any).clutchHome.car)
+const hold = async (key: 'w' | 'a' | 's' | 'd', ms: number) => {
+  await page.keyboard.down(key)
+  await wait(ms)
+  await page.keyboard.up(key)
+}
+
+test('the car drives with WASD, shows its legend, and draws nothing when parked', async () => {
+  assert.equal(await page.$eval('#drive-legend', (el) => getComputedStyle(el).display), 'flex')
+  const start = await car()
+  assert.equal(start.ramps, 2)
+  // W goes straight up the first ramp and into the title.
+  await page.evaluate(() => {
+    const w = window as any
+    w.__high = 0
+    w.__watch = setInterval(() => { w.__high = Math.max(w.__high, w.clutchHome.car.y) }, 10)
+  })
+  await hold('w', 1500)
+  const high = await page.evaluate(() => { const w = window as any; clearInterval(w.__watch); return w.__high })
+  assert.ok(high > 1.9, `it flew off the ramp: ${high}`)
+  const moved = await car()
+  assert.ok(moved.z > -9 + 1.4, `it bounced off the title, not through it: ${moved.z}`)
+  assert.ok(Math.hypot(moved.x - start.x, moved.z - start.z) > 2, 'it moved')
+  await hold('s', 300)
+  await wait(2500)
+  const parked = await car()
+  assert.equal(parked.ticking, false, 'it stops running once parked')
+  const frames = await page.evaluate(async () => {
+    const render = (window as any).clutch.stage.renderer.info.render
+    const before = render.frame
+    await new Promise((done) => setTimeout(done, 500))
+    return render.frame - before
+  })
+  assert.equal(frames, 0)
+})
+
+test('driving hard into everything leaves the car on the plate', async () => {
+  for (const [key, ms] of [['w', 1500], ['a', 500], ['w', 1200], ['d', 800], ['w', 1500]] as const) await hold(key, ms)
+  const state = await car()
+  assert.ok(Number.isFinite(state.x + state.y + state.z))
+  assert.ok(Math.abs(state.x) <= state.bound + 0.01 && Math.abs(state.z) <= state.bound + 0.01)
+  await shot(page, 'home-driving')
+  await wait(800)
+})
+
 test('pressing the button turns the scene into the editor in place', async () => {
   const at = await buttonAt()
   await page.evaluate(() => { (window as any).__marker = 'same page' })
@@ -53,6 +98,7 @@ test('pressing the button turns the scene into the editor in place', async () =>
   await shot(page, 'home-entering')
   await wait(1300)
   await shot(page, 'home-entered')
+  assert.equal(await page.$eval('#drive-legend', (el) => getComputedStyle(el).display), 'none')
   const result = await page.evaluate(() => {
     const { tools, stage } = (window as any).clutch
     const canvas = stage.canvas.getBoundingClientRect()

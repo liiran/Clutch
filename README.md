@@ -21,6 +21,8 @@ Then open **http://127.0.0.1:5173/** in your browser. On Windows, you can double
 
 Clutch only runs on your own computer for now.
 
+The menu has a little car to play with: drive it with W, A, S and D, jump the ramps and bounce off the letters.
+
 ## Ask the chat to build
 
 Type what you want. Your request shows up as a see-through preview, so nothing changes until you press **Apply**. **Discard** throws it away.

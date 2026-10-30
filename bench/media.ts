@@ -172,7 +172,7 @@ async function hero() {
 
   const at = await page.evaluate(() => {
     const { stage } = (window as any).clutch
-    const p = stage.camera.position.clone().set(0, 1.4, 9.5).project(stage.camera)
+    const p = stage.camera.position.clone().set(0, 1.4, 14.5).project(stage.camera)
     const rect = stage.canvas.getBoundingClientRect()
     return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
   })

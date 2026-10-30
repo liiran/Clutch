@@ -12,6 +12,8 @@ import { SIZE } from '../core/model.ts'
 import { PLATE_H, pieceGeometry, plainBox, studsOn } from '../render/geometry.ts'
 import { easeInOutCubic, type Stage } from '../render/stage.ts'
 import { playClick } from '../render/sound.ts'
+import { ToyCar } from './car.ts'
+import type { Box } from '../core/drive.ts'
 
 // One piece of a letter: from column x, w studs wide, from height y, h plates tall.
 interface Piece { x: number; w: number; y: number; h: number }
@@ -34,6 +36,8 @@ const LETTERS: Letter[] = [
 const OFF = SIZE / 2
 const TITLE_Z = 21, TITLE_DEPTH = 2
 const FALL = 0.72
+const TREES: Array<[number, number]> = [[11.5, 19.5], [51.5, 21.5]]
+const BUTTON_Z = 14.5
 const CAP_LENGTH = 30, CAP_DEPTH = 7.6, CAP_H = 1.1, BASE_H = 0.28, GUARD_H = 0.72, PRESS = 0.42
 
 interface Faller { mesh: THREE.Mesh; rest: number; start: number; landed: boolean }
@@ -85,7 +89,7 @@ function garden(): THREE.Mesh {
   const trunk = new THREE.CylinderGeometry(0.45, 0.55, 1.6, 8)
   const crown = new THREE.ConeGeometry(1.5, 3.2, 10)
   const top = new THREE.ConeGeometry(1.05, 2.2, 10)
-  for (const [x, z] of [[11.5, 19.5], [51.5, 21.5]]) {
+  for (const [x, z] of TREES) {
     add(trunk, COLOR.get('brown')!.hex, x, 0.8, z)
     add(crown, COLOR.get('green')!.hex, x, 2.9, z)
     add(top, COLOR.get('green')!.hex, x, 4.7, z)
@@ -109,6 +113,8 @@ export class Home {
   private title = new THREE.Group()
   private button = new THREE.Group()
   private plants: THREE.Mesh
+  private boxes: Box[] = []
+  private toy!: ToyCar
   private cap = new THREE.Group()
   private fallers: Faller[] = []
   private materials = new Map<string, THREE.MeshPhongMaterial>()
@@ -147,9 +153,38 @@ export class Home {
     this.buildTitle()
     this.buildButton()
     this.frame()
+    this.collectBoxes()
+    this.toy = new ToyCar(stage, this.boxes, !stage.reducedMotion)
+    stage.scene.add(this.toy.group)
     this.dropTitle()
     this.listen()
     stage.invalidateShadows()
+    // The car drops in last, once the title has landed.
+    window.setTimeout(() => { if (!this.leaving) this.toy.wake() }, stage.reducedMotion ? 0 : 1250)
+    window.setTimeout(() => document.documentElement.classList.add('can-drive'), stage.reducedMotion ? 0 : 1700)
+  }
+
+  get car() { return this.toy.state }
+
+  // What the car can run into: every piece of the title, the button and the trees.
+  private collectBoxes() {
+    let x = 17 - OFF
+    for (const letter of LETTERS) {
+      for (const piece of letter.pieces) {
+        this.boxes.push({
+          x0: x + piece.x, x1: x + piece.x + piece.w,
+          z0: TITLE_Z - OFF, z1: TITLE_Z + TITLE_DEPTH - OFF,
+          y0: piece.y * PLATE_H, h: (piece.y + piece.h) * PLATE_H,
+        })
+      }
+      x += letter.width + 1
+    }
+    const L = CAP_LENGTH / 2 + 1.1, D = CAP_DEPTH / 2 + 1.1
+    this.boxes.push({ x0: -L, x1: L, z0: BUTTON_Z - D, z1: BUTTON_Z + D, y0: 0, h: BASE_H + CAP_H })
+    for (const [tx, tz] of TREES) {
+      const cx = tx - OFF + 0.5, cz = tz - OFF + 0.5
+      this.boxes.push({ x0: cx - 0.7, x1: cx + 0.7, z0: cz - 0.7, z1: cz + 0.7, y0: 0, h: 6 })
+    }
   }
 
   private materialFor(color: string) {
@@ -219,7 +254,7 @@ export class Home {
     cap.castShadow = true
     base.castShadow = true
     this.button.add(base, walls, this.cap)
-    this.button.position.set(0, 0, 9.5)
+    this.button.position.set(0, 0, BUTTON_Z)
   }
 
   // Frames the title and button from low at the front, as close as they fit.
@@ -227,9 +262,9 @@ export class Home {
     const stage = this.stage
     const camera = stage.camera
     const direction = new THREE.Vector3(0, 0.5, 1).normalize()
-    const target = new THREE.Vector3(0, 1.6, 2)
+    const target = new THREE.Vector3(0, 1.6, 4)
     const corners: THREE.Vector3[] = []
-    for (const x of [-21, 21]) for (const y of [0, 7]) for (const z of [-13, 16]) corners.push(new THREE.Vector3(x, y, z))
+    for (const x of [-21, 21]) for (const y of [0, 7]) for (const z of [-13, 21]) corners.push(new THREE.Vector3(x, y, z))
     const place = (distance: number) => {
       camera.position.copy(target).addScaledVector(direction, distance)
       camera.lookAt(target)
@@ -342,6 +377,8 @@ export class Home {
     this.stage.controls.enabled = true
     this.moveCap(BASE_H - PRESS)
     this.listening.abort()
+    this.toy.stop()
+    document.documentElement.classList.remove('can-drive')
     this.stage.canvas.style.cursor = ''
     window.setTimeout(() => void this.enter(), 130)
   }
@@ -375,6 +412,7 @@ export class Home {
         faller.mesh.scale.setScalar(Math.max(0.001, 1 - u * u))
       })
       this.plants.scale.y = Math.max(0.001, 1 - k * k)
+      this.toy.group.position.y = -k * k * 3
       this.button.position.y = -k * k * 3
     })
 
@@ -392,7 +430,8 @@ export class Home {
 
     // From here on this is the editor, and all of this is gone from memory.
     stage.removeTicker(this.capTick)
-    stage.scene.remove(this.title, this.button, this.plants)
+    stage.scene.remove(this.title, this.button, this.plants, this.toy.group)
+    this.toy.dispose()
     for (const group of [this.title, this.button, this.plants]) {
       group.traverse((object) => {
         const mesh = object as THREE.Mesh

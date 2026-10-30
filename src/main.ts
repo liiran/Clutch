@@ -305,6 +305,7 @@ function warmUp() {
 const shared = location.hash.startsWith('#build=')
 if (root.classList.contains('scene')) {
   const home = new Home(stage)
+  ;(window as unknown as { clutchHome: Home }).clutchHome = home
   window.setTimeout(() => { if (root.classList.contains('scene')) warmUp() }, 2100)
   home.onEnter = () => {
     const last = projects.lastBuild()
