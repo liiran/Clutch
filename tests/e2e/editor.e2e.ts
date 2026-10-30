@@ -78,6 +78,7 @@ test('the parts menu shows about 40 parts, every picture drawn', async () => {
 test('the page is hidden until it is ready, then shown', async () => {
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('ready')), true)
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('app')!).visibility), 'visible')
+  assert.equal(await page.$('#boot'), null, 'the loading screen is gone')
 })
 
 test('search narrows the menu and says when nothing matches', async () => {

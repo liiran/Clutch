@@ -1,6 +1,8 @@
 // The click of plastic on plastic, synthesised: a very short burst of noise through a
 // band-pass filter, pitched a little differently each time so it never sounds canned.
 
+const VOLUME = 0.5 // scales every sound
+
 let context: AudioContext | null = null
 let noise: AudioBuffer | null = null
 let muted = localStorage.getItem('clutch_muted') === '1'
@@ -41,7 +43,7 @@ function burst(frequency: number, q: number, volume: number) {
   band.type = 'bandpass'
   band.frequency.value = frequency
   band.Q.value = q
-  gain.gain.value = volume
+  gain.gain.value = volume * VOLUME
   source.connect(band).connect(gain).connect(ctx.destination)
   source.start()
 }

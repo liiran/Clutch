@@ -347,7 +347,10 @@ if (root.classList.contains('scene')) {
 }
 
 // Everything is in place: show the page.
-requestAnimationFrame(() => root.classList.add('ready'))
+requestAnimationFrame(() => {
+  root.classList.add('ready')
+  window.setTimeout(() => $('boot').remove(), 300)
+})
 
 // For tests: a window into the running editor.
 ;(window as unknown as Record<string, unknown>).clutch = { stage, store, view, tools, chat, replay, projects }

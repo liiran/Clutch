@@ -8,21 +8,25 @@
   <meta name="theme-color" content="#1d1f24" />
   <link rel="icon" href="/mark.svg" type="image/svg+xml" />
   <style>
-    /* Before anything else has loaded: the scene's colour, and a mark only if it takes a while. */
+    /* Before anything else has loaded: the menu's colours, and its bricks dropping onto
+       a little baseplate. Only transforms and opacity move, so it never needs the page. */
     html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1f24; }
     html:not(.ready) #app, html:not(.ready) .skip-link { visibility: hidden; }
-    html:not(.ready) body::after {
-      content: '';
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      width: 44px;
-      height: 44px;
-      margin: -22px 0 0 -22px;
-      background: url('/mark.svg') center / contain no-repeat;
-      animation: boot 0.8s ease-in-out 0.35s infinite alternate both;
+    #boot { position: fixed; left: 50%; top: 50%; width: 126px; height: 96px; margin: -48px 0 0 -63px; pointer-events: none; z-index: 200; transform: scale(1.5); transition: opacity 0.25s ease; }
+    html.ready #boot { opacity: 0; }
+    #boot i { position: absolute; display: block; left: calc(var(--x) * 21px); bottom: calc(var(--y) * 1px + 8px); width: calc(var(--w) * 21px); height: calc(var(--h) * 1px); border-radius: 2px; background: var(--c); box-shadow: inset 0 -5px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.3); animation: boot-drop 1.9s linear calc(var(--n) * 0.13s) infinite both; }
+    #boot i::before, #boot b::before { content: ''; position: absolute; left: 4px; right: 4px; top: -4px; height: 4px; background: repeating-linear-gradient(90deg, var(--c) 0 13px, transparent 13px 21px); }
+    #boot b { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; --c: #1f8f3c; background: var(--c); border-radius: 2px; }
+    @keyframes boot-drop {
+      0% { transform: translateY(-84px); opacity: 0; animation-timing-function: cubic-bezier(0.5, 0, 1, 0.6); }
+      6% { opacity: 1; }
+      22% { transform: translateY(0); animation-timing-function: ease-out; }
+      29% { transform: translateY(-7px); animation-timing-function: ease-in; }
+      36% { transform: translateY(0); }
+      84% { transform: translateY(0); opacity: 1; }
+      94%, 100% { transform: translateY(0); opacity: 0; }
     }
-    @keyframes boot { from { opacity: 0.25; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) { #boot i { animation: none; } }
   </style>
   <link rel="stylesheet" href="/src/styles/fonts.css" />
   <link rel="stylesheet" href="/src/styles/editor.css" />
@@ -33,6 +37,14 @@
   </script>
 </head>
 <body>
+<div id="boot" aria-hidden="true">
+  <b></b>
+  <i style="--n:0;--x:0;--y:0;--w:6;--h:15;--c:#d01012"></i>
+  <i style="--n:1;--x:0;--y:15;--w:2;--h:11;--c:#f7d117"></i>
+  <i style="--n:2;--x:3;--y:15;--w:3;--h:30;--c:#f4f4f0"></i>
+  <i style="--n:3;--x:1;--y:26;--w:1;--h:19;--c:#6f3aa6"></i>
+  <i style="--n:4;--x:0;--y:45;--w:5;--h:13;--c:#0b5cc0"></i>
+</div>
 <a id="skip-link" class="skip-link" href="?edit">Start building</a>
 <div id="app">
 
