@@ -26,6 +26,7 @@ export class Stage {
   readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   private container: HTMLElement
+  private key = new THREE.DirectionalLight(0xfff5e8, 2.3)
   private tickers = new Set<Ticker>()
   private dirty = true
   private shadowsDirty = true
@@ -58,7 +59,7 @@ export class Stage {
     pmrem.dispose()
 
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x4a4a55, 0.5))
-    const key = new THREE.DirectionalLight(0xfff5e8, 2.3)
+    const key = this.key
     key.position.set(-26, 60, 34)
     key.castShadow = true
     key.shadow.mapSize.set(3072, 3072)
@@ -191,18 +192,21 @@ export class Stage {
     }
   }
 
-  // If drawing keeps falling well behind on a high-density screen, it drops to one
-  // pixel per point, which is the biggest saving there is and hardly shows in motion.
+  // If drawing keeps falling below 30 fps, it steps down until it keeps up: first one
+  // pixel per point, then no shadows, then a lower resolution. A single stall changes nothing.
   private watchFrameRate(now: number) {
     const gap = now - this.lastDraw
     this.lastDraw = now
-    if (gap > 200) return // it was idle, not slow
-    this.slowFrames = gap > 30 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 1)
-    if (this.slowFrames > 25 && this.renderer.getPixelRatio() > 1) {
-      this.slowFrames = 0
-      this.renderer.setPixelRatio(1)
-      this.resize()
-    }
+    if (gap > 500) return // it was idle, not slow
+    this.slowFrames = gap > 34 ? this.slowFrames + 1 : Math.max(0, this.slowFrames - 2)
+    if (this.slowFrames < 20) return
+    this.slowFrames = 0
+    const ratio = this.renderer.getPixelRatio()
+    if (ratio > 1) this.renderer.setPixelRatio(1)
+    else if (this.key.castShadow) this.key.castShadow = false
+    else if (ratio > 0.7) this.renderer.setPixelRatio(0.7)
+    else return
+    this.resize()
   }
 
   private draw(now = performance.now()) {

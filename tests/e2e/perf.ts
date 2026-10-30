@@ -4,7 +4,7 @@
 import { launch, open, shot, wait } from './harness.ts'
 
 const PIECES = Number(process.argv[2] || 3000)
-const browser = await launch(true)
+const browser = await launch(!process.env.CLUTCH_SOFTWARE)
 const page = await open(browser, '/?edit')
 await wait(800)
 
@@ -138,6 +138,7 @@ const idleCalls = await page.evaluate(async () => {
   return r.frame - before
 })
 console.log(`frames drawn while idle for 1 s: ${idleCalls}`)
+console.log('after any quality steps:', await page.evaluate(() => { const { stage } = (window as any).clutch; return { pixelRatio: stage.renderer.getPixelRatio(), shadows: stage.key.castShadow } }))
 await shot(page, 'perf-city')
 if (page.errors.length) console.log('page errors:', page.errors)
 await browser.close()
