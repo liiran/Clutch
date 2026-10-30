@@ -7,6 +7,27 @@
   <meta name="description" content="Build with bricks in your browser. Describe what you want and watch it snap together." />
   <meta name="theme-color" content="#25282e" />
   <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+  <style>
+    /* Before anything else has loaded: the scene's colour, and a mark only if it takes a while. */
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #25282e; }
+    html:not(.ready) #app, html:not(.ready) .skip-link { visibility: hidden; }
+    html:not(.ready) body::after {
+      content: '';
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 44px;
+      height: 44px;
+      margin: -22px 0 0 -22px;
+      background: url('/mark.svg') center / contain no-repeat;
+      animation: boot 0.8s ease-in-out 0.35s infinite alternate both;
+    }
+    @keyframes boot { from { opacity: 0.25; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  </style>
+  <link rel="stylesheet" href="/src/styles/fonts.css" />
+  <link rel="stylesheet" href="/src/styles/editor.css" />
+  <link rel="stylesheet" href="/src/styles/chat.css" />
+  <link rel="stylesheet" href="/src/styles/panels.css" />
   <script>
     if (!/[?&]edit\b/.test(location.search) && !location.hash.startsWith('#build=')) document.documentElement.classList.add('scene')
   </script>

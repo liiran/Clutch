@@ -1,13 +1,3 @@
-import '@fontsource/inter/400.css'
-import '@fontsource/inter/500.css'
-import '@fontsource/inter/600.css'
-import '@fontsource/space-grotesk/500.css'
-import '@fontsource/space-grotesk/600.css'
-import '@fontsource/space-grotesk/700.css'
-import './styles/editor.css'
-import './styles/chat.css'
-import './styles/panels.css'
-
 import { MAX_PIECES } from './core/model.ts'
 import { BASEPLATES } from './core/file.ts'
 import { COLOR } from './core/colors.ts'
@@ -298,9 +288,20 @@ refreshCounts()
 refreshHistory()
 dock.refresh()
 
+// The part pictures and the ghost's shaders are not needed to see the landing, so they
+// wait until the page is showing. They are ready before anything can ask for them.
+let warmed = false
+function warmUp() {
+  if (warmed) return
+  warmed = true
+  sidebar.startDrawing()
+  view.warmUp()
+}
+
 const shared = location.hash.startsWith('#build=')
 if (root.classList.contains('scene')) {
   const home = new Home(stage)
+  window.setTimeout(() => { if (root.classList.contains('scene')) warmUp() }, 2100)
   home.onEnter = () => {
     const last = projects.lastBuild()
     if (last) {
@@ -315,6 +316,7 @@ if (root.classList.contains('scene')) {
   home.onEntered = () => {
     const last = projects.lastBuild()
     startEditor()
+    warmUp()
     if (last) {
       store.commit(last.build.bricks, 'load')
       view.dropMany(last.build.bricks)
@@ -337,7 +339,11 @@ if (root.classList.contains('scene')) {
       setHint(`Opened a shared build: "${build.name}"`, 3000)
     }).catch((error: Error) => setHint(error.message, 5000))
   }
+  window.setTimeout(warmUp, 60)
 }
+
+// Everything is in place: show the page.
+requestAnimationFrame(() => root.classList.add('ready'))
 
 // For tests: a window into the running editor.
 ;(window as unknown as Record<string, unknown>).clutch = { stage, store, view, tools, chat, replay, projects }

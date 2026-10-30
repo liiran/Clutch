@@ -34,6 +34,7 @@ export class Stage {
   private plateMaterial: THREE.MeshStandardMaterial
   private gliding = false
   private started = false
+  private firstFrame = false
   private glideRun = 0
   private slowFrames = 0
   private lastDraw = 0
@@ -78,7 +79,7 @@ export class Stage {
     this.controls = new OrbitControls(this.camera, canvas)
     Object.assign(this.controls, {
       enableDamping: true, dampingFactor: 0.09, minDistance: 8, maxDistance: 240,
-      maxPolarAngle: Math.PI * 0.485, panSpeed: 1.2, zoomSpeed: 1.1, screenSpacePanning: true,
+      maxPolarAngle: Math.PI * 0.485, panSpeed: 1.2, zoomSpeed: 0.6, screenSpacePanning: true,
     })
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }
     this.controls.addEventListener('change', () => this.onControlsChange())
@@ -217,6 +218,10 @@ export class Stage {
     }
     this.renderer.render(this.scene, this.camera)
     this.dirty = false
+    if (!this.firstFrame) {
+      this.firstFrame = true
+      performance.mark('clutch-first-frame')
+    }
   }
 
   invalidate() { this.dirty = true }

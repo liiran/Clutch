@@ -317,7 +317,8 @@ kbd {
 /* ── Viewport ─────────────────────────────────── */
 #viewport { flex: 1; min-width: 0; position: relative; overflow: hidden; background: var(--canvas); }
 #viewport.is-covered { visibility: hidden; flex: 0 0 0; }
-canvas#canvas { display: block; position: absolute; inset: 0; touch-action: none; outline: none; }
+canvas#canvas { display: block; position: absolute; inset: 0; touch-action: none; outline: none; opacity: 0; transition: opacity 0.3s ease; }
+html.ready canvas#canvas { opacity: 1; }
 
 .glass {
   color: var(--glass-ink);

@@ -70,13 +70,14 @@ export class View {
     this.frame.frustumCulled = false
     stage.scene.add(this.frame)
 
-    this.cursor.add({ id: 1, part: 'plate_1x1', color: 'red', x: 0, y: 0, z: 0, rot: 0 })
-    this.layer.add({ id: 1, part: 'plate_1x1', color: 'red', x: 0, y: 0, z: 0, rot: 0 })
-    stage.renderer.compile(stage.scene, stage.camera)
-    this.cursor.clear()
-    this.layer.clear()
-
     store.onChange((change) => this.apply(change))
+  }
+
+  // Compiles the ghost's shaders ahead of time, so the first pick of a part does not hitch.
+  warmUp() {
+    this.cursor.add({ id: 1, part: 'plate_1x1', color: 'red', x: 0, y: 0, z: 0, rot: 0 })
+    this.stage.renderer.compile(this.stage.scene, this.stage.camera)
+    this.cursor.clear()
   }
 
   private apply(change: Change) {

@@ -75,6 +75,11 @@ test('the parts menu shows about 40 parts, every picture drawn', async () => {
   assert.equal(result.painted, result.total)
 })
 
+test('the page is hidden until it is ready, then shown', async () => {
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains('ready')), true)
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('app')!).visibility), 'visible')
+})
+
 test('search narrows the menu and says when nothing matches', async () => {
   await page.type('#part-search', '2x4')
   const shown = await page.$$eval('.part-tile', (tiles) => tiles.filter((t) => !(t as HTMLElement).hidden).map((t) => (t as HTMLElement).title))

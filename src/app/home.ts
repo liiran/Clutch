@@ -205,11 +205,12 @@ export class Home {
     const pieces = this.letters.flat()
     for (const brick of pieces) this.layer.add(brick)
     if (this.stage.reducedMotion) return
-    const lift = 7, ms = 620, stagger = 34, begin = 420
+    const lift = 7, ms = 520, stagger = 24, begin = 120
     const fallers = pieces.map((brick, index) => ({ brick, start: begin + index * stagger, landed: false }))
     for (const faller of fallers) this.layer.setPose(faller.brick.id, lift, 0)
-    const t0 = performance.now()
+    let t0 = 0
     const tick = () => {
+      t0 ||= performance.now()
       const now = performance.now() - t0
       let done = true
       for (const faller of fallers) {

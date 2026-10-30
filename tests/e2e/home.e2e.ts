@@ -22,6 +22,7 @@ after(async () => { await browser.close() })
 
 test('the landing shows only the scene, and sliding off the button cancels', async () => {
   page = await open(browser, '/')
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('topbar')!).position), 'fixed', 'the styles are in before the scripts run')
   await wait(3200)
   await shot(page, 'home')
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('scene')), true)
@@ -68,7 +69,7 @@ test('pressing the button turns the scene into the editor in place', async () =>
   })
   assert.equal(result.marker, 'same page')
   assert.equal(result.url, '?edit')
-  assert.equal(result.scene, '')
+  assert.doesNotMatch(result.scene, /scene|entering/)
   assert.equal(result.locked, false)
   assert.equal(result.fits, true)
   assert.equal(result.sidebar, 0)

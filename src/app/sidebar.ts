@@ -22,6 +22,7 @@ export class Sidebar {
   private sections: Array<{ el: HTMLElement; parts: PartDef[] }> = []
   private drawnColor = ''
   private drawing = 0
+  private canDraw = false
 
   constructor(tools: Tools) {
     this.tools = tools
@@ -98,7 +99,7 @@ export class Sidebar {
 
   // Redraws the pictures when the colour changes, a few per frame so nothing stutters.
   private drawAll(color: string) {
-    if (this.drawnColor === color) return
+    if (!this.canDraw || this.drawnColor === color) return
     this.drawnColor = color
     const run = ++this.drawing
     const queue = [...this.tiles.entries()]
@@ -112,6 +113,11 @@ export class Sidebar {
       if (queue.length) requestAnimationFrame(step)
     }
     requestAnimationFrame(step)
+  }
+
+  startDrawing() {
+    this.canDraw = true
+    this.drawAll(this.tools.color)
   }
 
   refresh() {

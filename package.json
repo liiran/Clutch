@@ -11,6 +11,7 @@
     "test:e2e": "node --experimental-strip-types --test --test-concurrency=1 --test-timeout=180000 --test-reporter=spec \"tests/e2e/*.e2e.ts\"",
     "bench": "node --experimental-strip-types bench/run.ts",
     "perf": "node --experimental-strip-types tests/e2e/perf.ts",
+    "load": "node --experimental-strip-types tests/e2e/load.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
