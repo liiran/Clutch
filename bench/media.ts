@@ -226,6 +226,8 @@ async function hero() {
   await wait(1300)
   await clickOn(page, '#chat-accept', 420)
   await wait(2300)
+  await page.evaluate(() => (window as any).clutch.view.frameAll())
+  await wait(800)
   // A small look around, ending back near the front.
   await orbit(page, 60, 650)
   await orbit(page, -100, 900)

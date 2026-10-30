@@ -15,7 +15,7 @@ import type { Change, Store } from './store.ts'
 
 const OFF = SIZE / 2
 const FALL = 0.72
-const MIN_VIEW = 36 // the least of the plate, in studs, shown around a build
+const MIN_VIEW = 28 // the least of the plate, in studs, shown around a build
 
 // Height above rest for a piece partway through its drop: a fall, then a small hop.
 const dropHeight = (k: number, lift: number) => k < FALL
