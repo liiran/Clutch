@@ -122,7 +122,7 @@ async function clickOn(page: Page, selector: string, ms = 450) {
 
 const screen = (page: Page, x: number, z: number, y = 0) => page.evaluate((cx: number, cz: number, cy: number) => {
   const { stage } = (window as any).clutch
-  const p = stage.camera.position.clone().set(cx - 24, cy * 0.4, cz - 24).project(stage.camera)
+  const p = stage.camera.position.clone().set(cx - 32, cy * 0.4, cz - 32).project(stage.camera)
   const rect = stage.canvas.getBoundingClientRect()
   return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
 }, x, z, y)
@@ -266,19 +266,19 @@ async function byHand() {
 
   await clickOn(page, '#palette .swatch[title="Blue"]', 500)
   await clickOn(page, '.part-tile[title="Brick 2×4"]', 450)
-  await plateClick(page, 22, 24)
+  await plateClick(page, 30, 32)
   await page.keyboard.press('r')
-  await plateClick(page, 27, 22)
+  await plateClick(page, 35, 30)
   await clickOn(page, '#palette .swatch[title="Yellow"]', 500)
   await clickOn(page, '.part-tile[title="Brick 2×2"]', 450)
-  await plateClick(page, 23, 24, 3)
-  await plateClick(page, 28, 23, 3)
+  await plateClick(page, 31, 32, 3)
+  await plateClick(page, 36, 31, 3)
   await clickOn(page, '#palette .swatch[title="Red"]', 500)
   await page.evaluate(() => (document.querySelector('#part-list') as HTMLElement).scrollTop = 1250)
   await wait(200)
   await clickOn(page, '.part-tile[title="Slope 2×2"]', 450)
-  await plateClick(page, 23, 24, 6)
-  await plateClick(page, 28, 23, 6)
+  await plateClick(page, 31, 32, 6)
+  await plateClick(page, 36, 31, 6)
   await wait(500)
   await page.keyboard.press('Escape')
   await wait(250)

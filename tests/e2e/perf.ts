@@ -23,8 +23,8 @@ const build = await page.evaluate(async (count: number) => {
   const bricks: unknown[] = []
   let id = 1
   for (let y = 0; bricks.length < count && y < 84; y += 3) {
-    for (let z = 0; z + 4 <= 48 && bricks.length < count; z += 4) {
-      for (let x = 0; x + 2 <= 48 && bricks.length < count; x += 2) {
+    for (let z = 0; z + 4 <= 64 && bricks.length < count; z += 4) {
+      for (let x = 0; x + 2 <= 64 && bricks.length < count; x += 2) {
         bricks.push({ id: id++, part: parts[(x + z + y) % parts.length] === 'plate_2x4' ? 'brick_2x4' : parts[(x + z + y) % parts.length], color: colors[(x * 3 + z + y) % colors.length], x, y, z, rot: 0 })
       }
     }

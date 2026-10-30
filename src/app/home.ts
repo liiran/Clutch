@@ -32,7 +32,7 @@ const LETTERS: Letter[] = [
 ]
 
 const OFF = SIZE / 2
-const TITLE_Z = 13, TITLE_DEPTH = 2
+const TITLE_Z = 21, TITLE_DEPTH = 2
 const FALL = 0.72
 const CAP_LENGTH = 30, CAP_DEPTH = 7.6, CAP_H = 1.1, BASE_H = 0.28, GUARD_H = 0.72, PRESS = 0.42
 
@@ -85,14 +85,14 @@ function garden(): THREE.Mesh {
   const trunk = new THREE.CylinderGeometry(0.45, 0.55, 1.6, 8)
   const crown = new THREE.ConeGeometry(1.5, 3.2, 10)
   const top = new THREE.ConeGeometry(1.05, 2.2, 10)
-  for (const [x, z] of [[3.5, 11.5], [43.5, 13.5]]) {
+  for (const [x, z] of [[11.5, 19.5], [51.5, 21.5]]) {
     add(trunk, COLOR.get('brown')!.hex, x, 0.8, z)
     add(crown, COLOR.get('green')!.hex, x, 2.9, z)
     add(top, COLOR.get('green')!.hex, x, 4.7, z)
   }
   const stem = new THREE.CylinderGeometry(0.06, 0.06, 0.9, 5)
   const head = new THREE.CylinderGeometry(0.3, 0.2, 0.14, 7)
-  const flowers: Array<[string, number, number]> = [['red', 6, 15], ['pink', 2, 16], ['yellow', 7, 12], ['purple', 40, 16], ['white', 45, 17], ['orange', 41, 12]]
+  const flowers: Array<[string, number, number]> = [['red', 14, 23], ['pink', 10, 24], ['yellow', 15, 20], ['purple', 48, 24], ['white', 53, 25], ['orange', 49, 20]]
   for (const [color, x, z] of flowers) {
     add(stem, COLOR.get('green')!.hex, x, 0.45, z)
     add(head, COLOR.get(color)!.hex, x, 0.95, z)
@@ -162,7 +162,7 @@ export class Home {
   }
 
   private buildTitle() {
-    let x = 9
+    let x = 17
     let order = 0
     for (const letter of LETTERS) {
       for (const piece of [...letter.pieces].sort((a, b) => a.y - b.y || a.x - b.x)) {

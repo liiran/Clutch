@@ -96,7 +96,7 @@ export class Stage {
     key.position.set(-26, 60, 34)
     key.castShadow = shadowsFor(this.level)
     key.shadow.mapSize.set(2048, 2048)
-    Object.assign(key.shadow.camera, { near: 10, far: 170, left: -40, right: 40, top: 40, bottom: -40 })
+    Object.assign(key.shadow.camera, { near: 10, far: 180, left: -50, right: 50, top: 50, bottom: -50 })
     key.shadow.bias = -0.0006
     key.shadow.normalBias = 0.03
     this.scene.add(key)

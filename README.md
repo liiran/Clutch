@@ -89,7 +89,7 @@ To change the model, copy `.env.example` to `.env.local`:
 
 ## The rules
 
-- The baseplate is 48 × 48 studs, and builds can reach 32 bricks tall with up to 3000 pieces. One chat reply can add up to 1500.
+- The baseplate is 64 × 64 studs, and builds can reach 32 bricks tall with up to 3000 pieces. One chat reply can add up to 1500.
 - Pieces sit on a stud grid and turn in quarter turns. They cannot overlap.
 - There are 44 parts: bricks, plates, tiles, slopes, round parts, arches, windows, doors, fences, wheels and flowers, in 22 colours.
 - A piece is attached when it grips a stud, in a chain back to the baseplate. By hand, a piece with nothing to grip is allowed and flagged, and the chat has to fix them.

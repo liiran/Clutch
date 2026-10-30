@@ -21,7 +21,7 @@ Keep what is on the baseplate unless told otherwise. To start over or replace th
 The baseplate is ${SIZE} by ${SIZE} studs. x runs 0 to ${SIZE - 1} from left to right. z runs 0 to ${SIZE - 1} from back to front, and the camera is at the front. y is height in plates from 0, up to ${MAX_Y}.
 A brick is 3 plates tall. A plate or tile is 1. So bricks stack at y = 0, 3, 6, 9...
 A piece's position is the lowest x and z cell it covers after rotating, and y is its bottom.
-Centre builds near x 24, z 24 unless asked otherwise. If there is already a build, put new things beside it, not on it, unless asked.
+Centre builds near x ${SIZE / 2}, z ${SIZE / 2} unless asked otherwise. If there is already a build, put new things beside it, not on it, unless asked.
 
 # Parts, with height in plates
 An id NxM covers N along x and M along z at rot 0. At rot 1 or 3 they swap: brick_2x4 at rot 1 covers 4 along x and 2 along z.
@@ -55,27 +55,27 @@ At most ${MAX_ACTIONS} actions and ${MAX_PROPOSAL} new pieces in one reply.
 
 # Recipes
 House, 12 wide by 10 deep, on a floor:
-{"tool":"fill","x1":18,"z1":19,"x2":29,"z2":28,"y":0,"height":1,"kind":"plate","color":"lightgray"}
-{"tool":"place","part":"door_1x4","color":"red","rot":1,"at":[[22,1,28]]}
-{"tool":"place","part":"window_1x2","color":"white","rot":1,"at":[[19,7,28],[27,7,28]]}
-{"tool":"walls","x1":18,"z1":19,"x2":29,"z2":28,"y":1,"height":21,"color":"white"}
-{"tool":"roof","x1":18,"z1":19,"x2":29,"z2":28,"y":22,"ridge":"x","color":"red","gable":"white"}
+{"tool":"fill","x1":26,"z1":27,"x2":37,"z2":36,"y":0,"height":1,"kind":"plate","color":"lightgray"}
+{"tool":"place","part":"door_1x4","color":"red","rot":1,"at":[[30,1,36]]}
+{"tool":"place","part":"window_1x2","color":"white","rot":1,"at":[[27,7,36],[35,7,36]]}
+{"tool":"walls","x1":26,"z1":27,"x2":37,"z2":36,"y":1,"height":21,"color":"white"}
+{"tool":"roof","x1":26,"z1":27,"x2":37,"z2":36,"y":22,"ridge":"x","color":"red","gable":"white"}
 The door stands at y 1 on the floor, is 18 tall, and the walls go 21 high so they close over it. Windows are 6 tall, at y 7. The wall comes up around them and over them.
 
 Car, facing the camera, 4 wide and 14 long. Extend this idea, do not copy it: change the proportions and details to suit what was asked.
-{"tool":"place","part":"wheels_4x2","color":"darkgray","at":[[22,0,18],[22,0,28]]}
-{"tool":"fill","x1":22,"z1":17,"x2":25,"z2":30,"y":5,"height":1,"kind":"plate","color":"red"}
-{"tool":"fill","x1":22,"z1":20,"x2":25,"z2":27,"y":6,"height":3,"color":"red"}
-{"tool":"place","part":"slope_4x2","color":"red","at":[[22,6,28]]}
-{"tool":"place","part":"slope_4x2","color":"red","rot":2,"at":[[22,6,18]]}
-{"tool":"place","part":"slope_4x2","color":"glassblue","at":[[22,9,25]]}
-{"tool":"fill","x1":22,"z1":22,"x2":25,"z2":24,"y":9,"height":3,"color":"black"}
-{"tool":"place","part":"tile_1x1","color":"yellow","at":[[22,6,30],[25,6,30]]}
-{"tool":"place","part":"tile_1x1","color":"glassred","at":[[22,6,17],[25,6,17]]}
+{"tool":"place","part":"wheels_4x2","color":"darkgray","at":[[30,0,26],[30,0,36]]}
+{"tool":"fill","x1":30,"z1":25,"x2":33,"z2":38,"y":5,"height":1,"kind":"plate","color":"red"}
+{"tool":"fill","x1":30,"z1":28,"x2":33,"z2":35,"y":6,"height":3,"color":"red"}
+{"tool":"place","part":"slope_4x2","color":"red","at":[[30,6,36]]}
+{"tool":"place","part":"slope_4x2","color":"red","rot":2,"at":[[30,6,26]]}
+{"tool":"place","part":"slope_4x2","color":"glassblue","at":[[30,9,33]]}
+{"tool":"fill","x1":30,"z1":30,"x2":33,"z2":32,"y":9,"height":3,"color":"black"}
+{"tool":"place","part":"tile_1x1","color":"yellow","at":[[30,6,38],[33,6,38]]}
+{"tool":"place","part":"tile_1x1","color":"glassred","at":[[30,6,25],[33,6,25]]}
 The wheels are 5 tall, so the chassis plate goes at y 5, and its middle studs grip the wheel sets. A tile sits on the chassis studs for lights.
 
 Tree, with voxels: a brown trunk, then leaves widening and narrowing:
-{"tool":"voxels","x":22,"y":0,"z":22,"unit":"brick","layers":[["....","....",".uu.",".uu."],["....","....",".uu.",".uu."],["gggg","gggg","gggg","gggg"],["gggg","gggg","gggg","gggg"],[".gg.",".gg.",".gg.",".gg."]]}
+{"tool":"voxels","x":30,"y":0,"z":30,"unit":"brick","layers":[["....","....",".uu.",".uu."],["....","....",".uu.",".uu."],["gggg","gggg","gggg","gggg"],["gggg","gggg","gggg","gggg"],[".gg.",".gg.",".gg.",".gg."]]}
 
 Tower with battlements: walls for the body, then place brick_1x1 on every second stud around the top ring.
 

@@ -43,9 +43,9 @@ test('pieces collide, and the baseplate and height limit are enforced', () => {
   assert.deepEqual(grid.fits('brick_1x1', 1, 2, 3, 0), { ok: false, reason: 'collision', blocker: 1 })
   assert.equal(grid.fits('brick_1x1', 2, 0, 0, 0).ok, true)
   assert.equal(grid.fits('brick_1x1', 1, 3, 3, 0).ok, true)
-  assert.deepEqual(grid.fits('brick_2x4', 47, 0, 0, 0), { ok: false, reason: 'bounds' })
-  assert.deepEqual(grid.fits('brick_2x4', 45, 0, 44, 1), { ok: false, reason: 'bounds' })
-  assert.equal(grid.fits('brick_2x4', 44, 0, 46, 1).ok, true)
+  assert.deepEqual(grid.fits('brick_2x4', 63, 0, 0, 0), { ok: false, reason: 'bounds' })
+  assert.deepEqual(grid.fits('brick_2x4', 61, 0, 60, 1), { ok: false, reason: 'bounds' })
+  assert.equal(grid.fits('brick_2x4', 60, 0, 62, 1).ok, true)
   assert.deepEqual(grid.fits('brick_1x1', 0, 94, 40, 0), { ok: false, reason: 'height' })
 })
 
@@ -102,7 +102,7 @@ test('tiling uses large pieces and staggers joints between layers', () => {
 })
 
 test('place reports errors and adds what fits', () => {
-  const r = applyActions([], [{ tool: 'place', part: 'brick_2x4', color: 'red', at: [[0, 0, 0], [0, 0, 0], [47, 0, 0]] }])
+  const r = applyActions([], [{ tool: 'place', part: 'brick_2x4', color: 'red', at: [[0, 0, 0], [0, 0, 0], [63, 0, 0]] }])
   assert.equal(r.added.length, 1)
   assert.equal(r.errors.length, 2)
   assert.match(r.errors[0], /overlaps piece #1/)
@@ -197,7 +197,7 @@ test('voxels become bricks by colour, and interlock between layers', () => {
 
 test('voxels reject letters outside the palette and rows off the baseplate', () => {
   assert.match(applyActions([], [{ tool: 'voxels', x: 0, y: 0, z: 0, layers: [['r?r']] }]).errors[0], /not a palette letter/)
-  assert.match(applyActions([], [{ tool: 'voxels', x: 47, y: 0, z: 0, layers: [['rr']] }]).errors[0], /off the baseplate/)
+  assert.match(applyActions([], [{ tool: 'voxels', x: 63, y: 0, z: 0, layers: [['rr']] }]).errors[0], /off the baseplate/)
 })
 
 test('remove, recolor, move and clear change the right pieces', () => {
@@ -228,7 +228,7 @@ test('remove, recolor, move and clear change the right pieces', () => {
 
 test('a reply cannot add more than the proposal limit', () => {
   const at: number[][] = []
-  for (let y = 0; y < 60; y += 3) for (let x = 0; x < 48; x++) for (let z = 0; z < 2; z++) at.push([x, y, z])
+  for (let y = 0; y < 60; y += 3) for (let x = 0; x < 64; x++) for (let z = 0; z < 2; z++) at.push([x, y, z])
   const r = applyActions([], [{ tool: 'place', part: 'brick_1x1', color: 'red', at }])
   assert.equal(r.added.length, 1500)
   assert.match(r.errors.join(' '), /limit of 1500/)
@@ -295,6 +295,15 @@ test('the ghost pulls into line with the piece under it', () => {
   assert.equal(alignTo(14.5, 2, 10, 4), 14.5)
   // A centre that falls between studs is not an option.
   assert.equal(alignTo(10.5, 1, 10, 4), 10.5 - 0.5)
+})
+
+test('a build saved on the old 48 stud plate moves to the middle of the new one', () => {
+  const old = fromFile({ version: 1, name: 'Old', baseplate: 'green', bricks: [['brick_2x4', 'red', 0, 0, 0, 0], ['brick_1x1', 'red', 47, 3, 47, 0]] })
+  assert.equal(old.dropped, 0)
+  assert.deepEqual(old.bricks.map((b) => [b.x, b.y, b.z]), [[8, 0, 8], [55, 3, 55]])
+  const saved = toFile('New', 'green', old.bricks)
+  assert.equal(saved.version, 2)
+  assert.deepEqual(fromFile(saved).bricks.map((b) => [b.x, b.z]), [[8, 8], [55, 55]], 'and only once')
 })
 
 test('the description lists ids and positions', () => {

@@ -22,7 +22,7 @@ const state = () => page.evaluate(() => {
 // The screen position of a baseplate cell, or of the top of a stack at height y (in plates).
 const screenOf = (x: number, z: number, y = 0) => page.evaluate((cx: number, cz: number, cy: number) => {
   const { stage } = (window as any).clutch
-  const p = stage.camera.position.clone().set(cx - 24, cy * 0.4, cz - 24).project(stage.camera)
+  const p = stage.camera.position.clone().set(cx - 32, cy * 0.4, cz - 32).project(stage.camera)
   const rect = stage.canvas.getBoundingClientRect()
   return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
 }, x, z, y)
@@ -99,19 +99,19 @@ test('picking a part and clicking places it, with the ghost under the pointer', 
   let s = await state()
   assert.equal(s.mode, 'place')
   assert.equal(s.part, 'brick_2x4')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   s = await state()
   assert.equal(s.count, 1)
   assert.equal(s.bricks[0].part, 'brick_2x4')
   assert.equal(s.bricks[0].y, 0)
-  assert.ok(Math.abs(s.bricks[0].x + 1 - 24) <= 1 && Math.abs(s.bricks[0].z + 2 - 24) <= 1, 'lands under the pointer')
+  assert.ok(Math.abs(s.bricks[0].x + 1 - 32) <= 1 && Math.abs(s.bricks[0].z + 2 - 32) <= 1, 'lands under the pointer')
   assert.equal(s.mode, 'place', 'stays ready for the next one')
 })
 
 test('a piece placed on another stacks on top, and rotation swaps its footprint', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   const [first] = (await state()).bricks
   await clickAt(first.x + 1, first.z + 2, 3)
   let s = await state()
@@ -127,10 +127,10 @@ test('a piece placed on another stacks on top, and rotation swaps its footprint'
 test('the ghost stays on the plate at the edge', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×8"]')
-  await clickAt(47.5, 47.5)
+  await clickAt(63.5, 63.5)
   const s = await state()
   assert.equal(s.count, 1)
-  assert.ok(s.bricks[0].x + 2 <= 48 && s.bricks[0].z + 8 <= 48)
+  assert.ok(s.bricks[0].x + 2 <= 64 && s.bricks[0].z + 8 <= 64)
 })
 
 test('undo and redo walk the history, by keyboard and buttons', async () => {
@@ -152,7 +152,7 @@ test('undo and redo walk the history, by keyboard and buttons', async () => {
 test('select shows the dock, which recolours, turns and deletes', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await page.keyboard.press('Escape')
   await wait(500)
   const [b] = (await state()).bricks
@@ -176,7 +176,7 @@ test('select shows the dock, which recolours, turns and deletes', async () => {
 test('paint and erase act on the piece clicked', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await wait(450)
   const [b] = (await state()).bricks
   await page.click('.swatch[title="Yellow"]')
@@ -304,7 +304,7 @@ test('the Parts tab lists what the build needs, and a step opens the replay ther
 test('the build saves itself, comes back after a reload, and can be renamed', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await page.keyboard.press('Escape')
   await page.evaluate(() => {
     const field = document.getElementById('name')!
@@ -325,7 +325,7 @@ test('the build saves itself, comes back after a reload, and can be renamed', as
 test('emptying a saved build stays empty after a reload', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await page.keyboard.press('Escape')
   await wait(900)
   await page.evaluate(() => {
@@ -341,7 +341,7 @@ test('emptying a saved build stays empty after a reload', async () => {
 test('the Open dialog lists builds and makes new ones', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await page.keyboard.press('Escape')
   await wait(900)
   await page.click('#open')
@@ -359,7 +359,7 @@ test('the Open dialog lists builds and makes new ones', async () => {
 test('a share link opens an independent copy', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await page.keyboard.press('Escape')
   const link = await page.evaluate(async () => {
     const { store } = (window as any).clutch
@@ -388,7 +388,7 @@ test('a share link opens an independent copy', async () => {
 test('clear asks first, and undo brings it back', async () => {
   await reset()
   await page.click('.part-tile[title="Brick 2×4"]')
-  await clickAt(24, 24)
+  await clickAt(32, 32)
   await page.keyboard.press('Escape')
   await wait(100)
   await page.click('#clear')

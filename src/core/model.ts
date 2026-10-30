@@ -1,7 +1,7 @@
 // The build as plain data. Nothing here knows about the browser, so the editor
 // and the local server run exactly the same rules.
 
-export const SIZE = 48           // the baseplate, in studs along x and z
+export const SIZE = 64           // the baseplate, in studs along x and z
 export const MAX_Y = 96          // the build height limit, in plates (32 bricks)
 export const BRICK = 3           // a brick is three plates tall
 export const MAX_PIECES = 3000   // the most pieces one build can hold
