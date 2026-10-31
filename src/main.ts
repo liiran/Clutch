@@ -201,7 +201,7 @@ chat.onAsk = () => {
 chat.onPreviewChange = (open) => {
   if (open) {
     showView('build')
-    setChatHidden(false) // Apply and Discard are in the chat
+    void setChatHidden(false) // Apply and Discard are in the chat
   }
   lockWhile()
   refreshHistory()
@@ -209,17 +209,69 @@ chat.onPreviewChange = (open) => {
 }
 
 // ── Hiding the chat ────────────────────────────────────────────
-function setChatHidden(hidden: boolean) {
+const CHAT_SLIDE_MS = 240
+const chatPanel = $('chat'), viewportEl = $('viewport')
+let chatWanted = Boolean(localStorage.getItem('clutch_chat_hidden'))
+let chatSliding = false
+
+function markChat(hidden: boolean) {
   root.classList.toggle('chat-hidden', hidden)
-  $('chat-show').hidden = !hidden
-  localStorage.setItem('clutch_chat_hidden', hidden ? '1' : '')
+  $('chat-toggle').classList.toggle('is-off', hidden)
+  $('chat-toggle').title = hidden ? 'Show the chat (H)' : 'Hide the chat (H)'
 }
-setChatHidden(Boolean(localStorage.getItem('clutch_chat_hidden')))
+
+// One slide of the panel. It moves over the 3D view, whose canvas only resizes once.
+async function slideChat(hidden: boolean) {
+  const gap = parseFloat(getComputedStyle(root).getPropertyValue('--gap'))
+  const distance = (chatPanel.offsetWidth || parseFloat(getComputedStyle(root).getPropertyValue('--chat-w'))) + gap
+  // On the Parts list there is no canvas, so the page just reflows as the panel moves.
+  if (viewportEl.classList.contains('is-covered')) {
+    markChat(false)
+    await stage.tween(CHAT_SLIDE_MS, (k) => {
+      const e = 1 - (1 - k) ** 3
+      chatPanel.style.marginRight = `${-distance * (hidden ? e : 1 - e)}px`
+    })
+    chatPanel.style.marginRight = ''
+    markChat(hidden)
+    return
+  }
+  const place = (e: number) => {
+    const out = hidden ? e : 1 - e // how far the panel has gone
+    chatPanel.style.transform = `translateX(${distance * out}px)`
+    viewportEl.style.setProperty('--shift', `${distance * (1 - out)}px`)
+  }
+  const wide = hidden ? viewportEl.clientWidth + distance : viewportEl.clientWidth
+  const from = hidden ? wide - distance : wide, to = hidden ? wide : wide - distance
+  markChat(false)
+  place(0)
+  const sliding = stage.slideView(from, to, CHAT_SLIDE_MS, place)
+  root.classList.add('chat-sliding')
+  await sliding
+  markChat(hidden)
+  root.classList.remove('chat-sliding')
+  chatPanel.style.transform = ''
+  viewportEl.style.removeProperty('--shift')
+}
+
+async function setChatHidden(hidden: boolean) {
+  chatWanted = hidden
+  localStorage.setItem('clutch_chat_hidden', hidden ? '1' : '')
+  if (chatSliding) return // the slide under way picks this up when it ends
+  const stacked = window.innerWidth <= 1024 // the panels are in a column, so there is nothing to slide past
+  if (stage.reducedMotion || stacked || root.classList.contains('scene')) {
+    markChat(hidden)
+    return
+  }
+  chatSliding = true
+  while (root.classList.contains('chat-hidden') !== chatWanted) await slideChat(chatWanted)
+  chatSliding = false
+}
+markChat(chatWanted)
 const toggleChat = () => {
-  if (!chat.isPreviewing) setChatHidden(!root.classList.contains('chat-hidden'))
+  if (!chat.isPreviewing) void setChatHidden(!chatWanted)
 }
 $('chat-hide').addEventListener('click', toggleChat)
-$('chat-show').addEventListener('click', toggleChat)
+$('chat-toggle').addEventListener('click', toggleChat)
 
 // ── Commands ───────────────────────────────────────────────────
 // Picking a part means building, so it brings the model back.

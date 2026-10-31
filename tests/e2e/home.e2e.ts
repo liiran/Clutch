@@ -47,7 +47,7 @@ test('the title waits for its last brick, with a ghost in the gap', async () => 
     const { stage } = (window as any).clutch
     let ghosts = 0
     stage.scene.traverse((object: any) => {
-      if (object.isMesh && object.visible && object.material.transparent && object.material.opacity === 0.32) ghosts++
+      if (object.isMesh && object.visible && object.material.transparent && object.material.opacity === 0.45) ghosts++
     })
     return ghosts
   })
@@ -59,7 +59,7 @@ test('clicking the ghost brick opens the editor too', async () => {
   await wait(2400)
   const at = await other.evaluate(() => {
     const { stage } = (window as any).clutch
-    const p = stage.camera.position.clone().set(4, 5.4, -10).project(stage.camera)
+    const p = stage.camera.position.clone().set(14.5, 4.4, -10).project(stage.camera)
     const rect = stage.canvas.getBoundingClientRect()
     return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
   })

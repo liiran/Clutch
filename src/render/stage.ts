@@ -78,6 +78,7 @@ function floorTexture(): THREE.CanvasTexture {
 }
 
 export class Stage {
+  private heldWidth = 0
   readonly scene = new THREE.Scene()
   readonly camera = new THREE.PerspectiveCamera(32, 1, 0.5, 600)
   readonly renderer: THREE.WebGLRenderer
@@ -204,6 +205,12 @@ export class Stage {
   private resize() {
     const w = this.container.clientWidth, h = this.container.clientHeight
     if (!w || !h) return
+    if (this.heldWidth) {
+      this.renderer.setSize(w, h)
+      this.applyHeldWidth()
+      this.draw()
+      return
+    }
     // A view that was showing the whole plate keeps showing it.
     const refit = this.started && !this.gliding && this.isAtDefaultView()
     this.camera.aspect = w / h
@@ -216,6 +223,42 @@ export class Stage {
       this.camera.lookAt(view.target)
     }
     if (this.started) this.draw() // Resizing clears the canvas, so draw straight away or it flashes.
+  }
+
+  private applyHeldWidth() {
+    const h = this.container.clientHeight
+    this.camera.setViewOffset(this.heldWidth, h, 0, 0, this.container.clientWidth, h)
+    this.invalidate()
+  }
+
+  // Lets a panel slide over the 3D view without resizing the canvas on every frame. The
+  // canvas takes the larger size once, and only the camera's view moves from one width to
+  // the other. The caller changes the layout straight after calling this.
+  async slideView(from: number, to: number, ms: number, step: (e: number) => void) {
+    const refit = this.isAtDefaultView()
+    const h = this.container.clientHeight
+    const p0 = this.camera.position.clone(), t0 = this.controls.target.clone()
+    const view = refit ? this.defaultView(to / h) : null
+    this.gliding = true
+    this.heldWidth = from
+    this.applyHeldWidth()
+    await this.tween(ms, (k) => {
+      const e = 1 - (1 - k) ** 3
+      this.heldWidth = from + (to - from) * e
+      this.applyHeldWidth()
+      if (view) {
+        this.camera.position.lerpVectors(p0, view.position, e)
+        this.controls.target.lerpVectors(t0, view.target, e)
+      }
+      step(e)
+    })
+    this.heldWidth = 0
+    this.gliding = false
+    this.camera.clearViewOffset()
+    this.camera.aspect = to / h
+    this.camera.updateProjectionMatrix()
+    this.invalidate()
+    this.onViewChange?.()
   }
 
   // The frame loop only runs while there is something to do.
@@ -337,7 +380,10 @@ export class Stage {
       const e = easeInOutCubic(k)
       this.camera.position.lerpVectors(p0, view.position, e)
       this.controls.target.lerpVectors(t0, view.target, e)
-      if (k === 1) this.gliding = false
+      if (k === 1) {
+        this.gliding = false
+        this.onViewChange?.()
+      }
     })
   }
 

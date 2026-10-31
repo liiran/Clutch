@@ -496,19 +496,69 @@ test('clear asks first, and undo brings it back', async () => {
 test('the chat can be hidden and comes back, including for a preview', async () => {
   await reset()
   const width = () => page.$eval('#viewport', (el) => el.getBoundingClientRect().width)
+  const display = () => page.$eval('#chat', (el) => getComputedStyle(el).display)
+  const settled = () => page.evaluate(() => {
+    const { stage } = (window as any).clutch
+    const rect = document.getElementById('viewport')!.getBoundingClientRect()
+    return {
+      sliding: document.documentElement.classList.contains('chat-sliding'),
+      offset: stage.camera.view?.enabled ?? false,
+      canvas: Math.round(stage.canvas.getBoundingClientRect().width) === Math.round(rect.width),
+      aspect: Math.abs(stage.camera.aspect - rect.width / rect.height) < 0.01,
+    }
+  })
+  const clean = { sliding: false, offset: false, canvas: true, aspect: true }
   const before = await width()
+
+  // The canvas resizes once, however long the slide takes.
+  await page.evaluate(() => {
+    const canvas = document.getElementById('canvas')!
+    ;(window as any).__resizes = 0
+    new MutationObserver(() => { (window as any).__resizes++ }).observe(canvas, { attributes: true, attributeFilter: ['width'] })
+  })
   await page.click('#chat-hide')
   await wait(100)
-  assert.equal(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none')
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains('chat-sliding')), true, 'it is still moving')
+  assert.notEqual(await page.$eval('#chat', (el) => (el as HTMLElement).style.transform), '')
+  await wait(350)
+  assert.equal(await display(), 'none')
   assert.ok(await width() > before + 300, 'the 3D view takes the room')
+  assert.deepEqual(await settled(), clean)
+  assert.ok(await page.evaluate(() => (window as any).__resizes) <= 1)
+
   await page.keyboard.press('h')
-  await wait(100)
-  assert.notEqual(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none')
+  await wait(450)
+  assert.notEqual(await display(), 'none')
+  assert.equal(await width(), before)
+  assert.deepEqual(await settled(), clean)
+
+  // Asking twice quickly ends where the last request says.
+  await page.click('#chat-toggle')
+  await wait(60)
+  await page.click('#chat-toggle')
+  await wait(800)
+  assert.notEqual(await display(), 'none')
+  assert.deepEqual(await settled(), clean)
+
   await page.click('#chat-hide')
   await page.evaluate(() => (window as any).clutch.chat.preview([{ tool: 'place', part: 'brick_2x4', color: 'red', at: [[0, 0, 0]] }]))
-  await wait(100)
-  assert.notEqual(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none', 'Apply and Discard are in the chat')
+  await wait(800)
+  assert.notEqual(await display(), 'none', 'Apply and Discard are in the chat')
+  assert.deepEqual(await settled(), clean)
   await page.click('#chat-decline')
+
+  // It also slides on the Parts list, and pieces still land where clicked after all that.
+  await page.click('[data-view="parts"]')
+  await page.keyboard.press('h')
+  await wait(450)
+  assert.equal(await display(), 'none')
+  await page.keyboard.press('h')
+  await wait(450)
+  assert.equal(await page.$eval('#chat', (el) => (el as HTMLElement).style.marginRight), '')
+  await page.click('[data-view="build"]')
+  await page.click('.part-tile[title="Brick 2×4"]')
+  await clickAt(20, 20)
+  assert.deepEqual((await state()).bricks.map((b) => [b.x, b.z]), [[19, 18]], 'a 2×4 centres on the pointer')
 })
 
 test('My builds holds saved builds, download and share, and closes itself', async () => {

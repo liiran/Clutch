@@ -145,8 +145,9 @@ button:disabled { cursor: default; }
   transition: background 0.12s;
 }
 .actions-btn:hover, .actions-btn[aria-expanded="true"] { background: rgba(255, 255, 255, 0.1); }
-#chat-show { background: var(--accent); color: var(--accent-ink); margin-left: 3px; }
-#chat-show:hover { background: var(--accent-hover); }
+#chat-toggle { margin-left: 3px; transition: background 0.2s, color 0.2s; }
+#chat-toggle.is-off { background: var(--accent); color: var(--accent-ink); }
+#chat-toggle.is-off:hover { background: var(--accent-hover); }
 .menu-wrap { position: relative; }
 #builds-menu {
   position: absolute;
@@ -696,10 +697,16 @@ html.scene .skip-link:focus-visible { transform: translate(-50%, 0); }
 
 html.chat-hidden #chat { display: none; }
 
+/* While the chat slides, it sits over a full-width 3D view, and what is anchored to the
+   view's right side or middle moves with it instead of jumping. */
+html.chat-sliding #chat { position: fixed; top: var(--gap); bottom: var(--gap); right: var(--gap); z-index: 40; box-shadow: 0 0 0 var(--gap) var(--frame); will-change: transform; }
+html.chat-sliding #actions, html.chat-sliding .view-tools, html.chat-sliding #help { transform: translateX(calc(var(--shift) * -1)); }
+html.chat-sliding #hint, html.chat-sliding #dock, html.chat-sliding #replay, html.chat-sliding .empty-state { transform: translateX(calc(-50% - var(--shift) / 2)); animation: none; }
+
 /* ── Narrow windows ───────────────────────────── */
 @media (max-width: 1240px) {
   /* Too tight for words, so these become icons; their tooltips still say what they do. */
-  .view-tools .tool-btn { font-size: 0; gap: 0; }
+  .view-tools .tool-btn, .actions-btn { font-size: 0; gap: 0; }
   #dock .dock-swatches { display: none; }
   #dock { grid-template-columns: minmax(0, 1fr) auto; }
 }
@@ -726,7 +733,6 @@ html.chat-hidden #chat { display: none; }
 @media (max-width: 760px) {
   #stats, .actions-divider, #mute { display: none; }
   #nameplate { max-width: calc(100% - 200px); }
-  #builds-btn { font-size: 0; gap: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

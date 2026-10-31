@@ -24,15 +24,15 @@ const p = (x: number, w: number, y: number, h: number): Piece => ({ x, w, y, h }
 // Every letter is 15 plates tall, made of tall, medium and small bricks that differ from
 // one stroke to the next. The H's left side is one big brick and a small one, and its
 // right side two medium ones.
-// The last brick is the right half of the T's bar.
-const LAST_BRICK = p(3, 2, 12, 3)
+// The last brick is the top right of the H.
+const LAST_BRICK = p(3, 1, 7, 8)
 const LETTERS: Letter[] = [
   { color: 'red', width: 4, pieces: [p(0, 4, 0, 3), p(0, 1, 3, 6), p(0, 1, 9, 3), p(0, 3, 12, 3), p(3, 1, 12, 3)] },
   { color: 'yellow', width: 4, pieces: [p(1, 3, 0, 3), p(0, 1, 0, 9), p(0, 1, 9, 6)] },
   { color: 'white', width: 4, pieces: [p(0, 4, 0, 3), p(0, 1, 3, 9), p(0, 1, 12, 3), p(3, 1, 3, 3), p(3, 1, 6, 9)] },
-  { color: 'blue', width: 5, pieces: [p(2, 1, 0, 3), p(2, 1, 3, 9), p(0, 3, 12, 3), LAST_BRICK] },
+  { color: 'blue', width: 5, pieces: [p(2, 1, 0, 3), p(2, 1, 3, 9), p(0, 3, 12, 3), p(3, 2, 12, 3)] },
   { color: 'orange', width: 4, pieces: [p(0, 2, 0, 3), p(2, 2, 0, 3), p(0, 1, 3, 3), p(0, 1, 6, 6), p(0, 4, 12, 3)] },
-  { color: 'purple', width: 4, pieces: [p(0, 1, 0, 12), p(0, 1, 12, 3), p(3, 1, 0, 7), p(3, 1, 7, 8), p(1, 2, 6, 3)] },
+  { color: 'purple', width: 4, pieces: [p(0, 1, 0, 12), p(0, 1, 12, 3), p(3, 1, 0, 7), LAST_BRICK, p(1, 2, 6, 3)] },
 ]
 
 const OFF = SIZE / 2
@@ -189,7 +189,7 @@ export class Home {
         if (piece === LAST_BRICK) {
           mesh.visible = false
           this.lastBrick = { mesh, rest, start: 0, landed: false }
-          this.ghost = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: COLOR.get(letter.color)!.hex, transparent: true, opacity: 0.32, depthWrite: false }))
+          this.ghost = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: COLOR.get(letter.color)!.hex, transparent: true, opacity: 0.45, depthWrite: false }))
           this.ghost.position.copy(mesh.position)
           this.ghost.visible = this.stage.reducedMotion
           this.title.add(this.ghost)

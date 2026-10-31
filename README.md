@@ -23,7 +23,7 @@ Clutch only runs on your own computer for now.
 
 ## Ask the chat to build
 
-Type what you want. Press H to hide the chat when you want more room. Your request shows up as a see-through preview, so nothing changes until you press **Apply**. **Discard** throws it away.
+Type what you want. Press H or the Chat button to hide the chat when you want more room. Your request shows up as a see-through preview, so nothing changes until you press **Apply**. **Discard** throws it away.
 
 <p align="center">
   <img src="docs/media/preview.png" alt="A translucent preview of a white house with a red roof on a green baseplate. The chat panel on the right shows the request, the reply, a green Checked card reading all attached, nothing overlapping, and a bar with Discard and Apply buttons." width="760">
@@ -92,7 +92,7 @@ To set these, copy `.env.example` to `.env.local` and restart the server:
 
 | Setting | Effect |
 |---|---|
-| `CLUTCH_API_KEY` | Your Anthropic API key. Leave it empty to use Claude Code. |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key. Leave it empty to use Claude Code. Clutch also picks this up if it is set across your whole computer. Only Anthropic keys work for now. |
 | `CLUTCH_CLAUDE_MODEL` | `sonnet` by default. `haiku` is the cheapest and `opus` the strongest, or use a full name, such as `claude-sonnet-4-6`, to pin one. |
 | `CLUTCH_CLAUDE_EFFORT` | `medium` by default. Higher builds better and takes longer. |
 | `CLUTCH_CLAUDE_BIN` | The path to `claude`, if it cannot be found automatically. |
