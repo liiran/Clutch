@@ -93,7 +93,7 @@ To set these, copy `.env.example` to `.env.local` and restart the server:
 | Setting | Effect |
 |---|---|
 | `ANTHROPIC_API_KEY` | Your Anthropic API key. Leave it empty to use Claude Code. Clutch also picks this up if it is set across your whole computer. Only Anthropic keys work for now. |
-| `CLUTCH_CLAUDE_MODEL` | `sonnet` by default. `haiku` is the cheapest and `opus` the strongest, or use a full name, such as `claude-sonnet-4-6`, to pin one. |
+| `CLUTCH_CLAUDE_MODEL` | `sonnet` by default. `haiku` is the cheapest and `opus` the strongest, or use a full name, such as `claude-sonnet-4-6`, to pin one. With Claude Code, these short names follow the newest version. With an API key, they mean the version named in `server/anthropic-api.ts`, so your costs don't change by surprise. |
 | `CLUTCH_CLAUDE_EFFORT` | `medium` by default. Higher builds better and takes longer. |
 | `CLUTCH_CLAUDE_BIN` | The path to `claude`, if it cannot be found automatically. |
 
