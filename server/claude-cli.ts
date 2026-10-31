@@ -1,11 +1,12 @@
-import { spawn } from 'node:child_process'
+import { execFile, type ExecFileException } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
+import { logUsage } from './anthropic-api.ts'
 
-// Runs the Claude Code CLI signed in on this machine as the chat model, so no API key is
-// needed. No tools are enabled and the model can only return reply JSON, so a prompt
+// Runs the Claude Code CLI signed in on this machine as the chat model, which needs no API
+// key. It is the default; anthropic-api.ts takes over when a key is set. No tools are enabled and the model can only return reply JSON, so a prompt
 // cannot make it touch files or run commands.
 
 export interface ClaudeOptions {
@@ -72,12 +73,14 @@ export async function askClaude(request: ClaudeRequest, options: ClaudeOptions =
     '--strict-mcp-config',
   ]
   const stdout = await run(options.bin || findClaude(), [...(options.binArgs ?? []), ...args], request.prompt, request.signal)
-  let envelope: { is_error?: boolean; subtype?: string; result?: string; structured_output?: unknown }
+  let envelope: { is_error?: boolean; subtype?: string; result?: string; structured_output?: unknown; total_cost_usd?: number; usage?: { input_tokens: number; output_tokens: number } }
   try {
     envelope = JSON.parse(stdout)
   } catch {
     throw new Error('Claude Code returned output that is not JSON.')
   }
+  // What the same request would cost on an API key. The signed-in plan is not charged per request.
+  if (envelope.usage) logUsage(`CLI ${options.model || 'sonnet'}`, envelope.usage.input_tokens, envelope.usage.output_tokens, envelope.total_cost_usd ?? null)
   if (envelope.is_error || envelope.subtype !== 'success') throw new Error(`Claude Code did not finish the reply: ${envelope.result ?? envelope.subtype ?? 'unknown'}`)
   if (envelope.structured_output !== undefined) return envelope.structured_output
   return JSON.parse(envelope.result || '')
@@ -85,40 +88,20 @@ export async function askClaude(request: ClaudeRequest, options: ClaudeOptions =
 
 function run(command: string, args: string[], input: string, signal?: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) { reject(new Error('aborted')); return }
-    const child = spawn(command, args, { cwd: workdir(), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
-    let stdout = ''
-    let stderr = ''
-    let settled = false
-    const finish = (error: Error | null, value = '') => {
-      if (settled) return
-      settled = true
-      signal?.removeEventListener('abort', onAbort)
-      if (error) reject(error)
-      else resolve(value)
-    }
-    const onAbort = () => { child.kill(); finish(new Error('aborted')) }
-    signal?.addEventListener('abort', onAbort)
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk
-      if (stdout.length > MAX_OUTPUT) { child.kill(); finish(new Error('Claude Code returned too much output.')) }
+    const child = execFile(command, args, { cwd: workdir(), windowsHide: true, maxBuffer: MAX_OUTPUT, signal }, (error, stdout, stderr) => {
+      if (error) reject(explain(error, stderr || stdout))
+      else resolve(stdout)
     })
-    child.stderr.on('data', (chunk) => { if (stderr.length < 4000) stderr += chunk })
-    child.stdin.on('error', () => { /* the process may exit before reading the whole prompt */ })
-    child.on('error', (error: NodeJS.ErrnoException) => {
-      finish(error.code === 'ENOENT'
-        ? new ClaudeUnavailableError('The chat needs Claude Code on this computer. Install it, sign in, and restart the server.')
-        : error)
-    })
-    child.on('close', (code) => {
-      if (code === 0) finish(null, stdout)
-      else {
-        const detail = (stderr.trim() || stdout.trim()).slice(0, 400)
-        finish(/log ?in|auth|credential/i.test(detail)
-          ? new ClaudeUnavailableError('Claude Code is not signed in. Run claude in a terminal, sign in, and try again.')
-          : new Error(`Claude Code exited with code ${code}: ${detail}`))
-      }
-    })
-    child.stdin.end(input)
+    child.stdin?.on('error', () => { /* the process may exit before reading the whole prompt */ })
+    child.stdin?.end(input)
   })
+}
+
+function explain(error: ExecFileException, output: string): Error {
+  if (error.name === 'AbortError') return new Error('aborted')
+  if (error.code === 'ENOENT') return new ClaudeUnavailableError('The chat needs Claude Code on this computer. Install it, sign in, and restart the server.')
+  if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') return new Error('Claude Code returned too much output.')
+  const detail = output.trim().slice(0, 400)
+  if (/log ?in|auth|credential/i.test(detail)) return new ClaudeUnavailableError('Claude Code is not signed in. Run claude in a terminal, sign in, and try again.')
+  return new Error(`Claude Code exited with code ${error.code}: ${detail}`)
 }

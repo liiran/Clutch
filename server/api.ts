@@ -6,13 +6,16 @@ import { Grid } from '../src/core/grid.ts'
 import { MAX_PIECES, isRot, type Brick } from '../src/core/model.ts'
 import { COLOR } from '../src/core/colors.ts'
 import { PART } from '../src/core/parts.ts'
+import { askAnthropic } from './anthropic-api.ts'
 import { askClaude, findClaude, type ClaudeOptions } from './claude-cli.ts'
 import { SCHEMA, SYSTEM } from './prompt.ts'
 
 export type Ask = (prompt: string, signal: AbortSignal) => Promise<unknown>
 
 export interface ApiOptions extends ClaudeOptions {
-  ask?: Ask // replaces the CLI, for tests
+  ask?: Ask // replaces the model, for tests
+  apiKey?: string // when set, the chat uses the API with this key instead of the CLI
+  fetch?: typeof fetch // replaces the network, for tests
   timeoutMs?: number
 }
 
@@ -70,7 +73,11 @@ function readAnswer(value: unknown): Answer {
 const score = (result: ApplyResult) => result.errors.length + result.loose.length
 
 export function createChatHandler(options: ApiOptions = {}) {
-  const ask: Ask = options.ask ?? ((prompt, signal) => askClaude({ system: SYSTEM, prompt, schema: SCHEMA, signal }, options))
+  const { apiKey } = options
+  const ask: Ask = options.ask ?? ((prompt, signal) => {
+    const request = { system: SYSTEM, prompt, schema: SCHEMA, signal }
+    return apiKey ? askAnthropic(request, { ...options, apiKey }) : askClaude(request, options)
+  })
   return async (request: IncomingMessage, response: ServerResponse) => {
     if (request.method !== 'POST') { json(response, 405, { error: 'Method not allowed.' }); return }
     if (!request.headers['content-type']?.startsWith('application/json')) { json(response, 415, { error: 'Send application/json.' }); return }
@@ -139,13 +146,15 @@ export function createApi(options: ApiOptions = {}) {
   return async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
     const path = request.url?.split('?')[0]
     if (path !== '/api/clutch/chat' && path !== '/api/clutch/status') { next(); return }
-    // Only this machine's own editor may use the signed-in CLI.
+    // Only this machine's own editor may use the signed-in CLI or the API key.
     if (!/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(request.headers.host ?? '')) { json(response, 403, { error: 'Use the local address to reach Clutch.' }); return }
     const origin = request.headers.origin
     if (origin && origin !== `http://${request.headers.host}`) { json(response, 403, { error: 'Only this editor can use the chat.' }); return }
     if (path === '/api/clutch/chat') { await chat(request, response); return }
     const model = options.model || 'sonnet'
-    json(response, 200, { ready: Boolean(options.ask) || options.bin !== undefined || findClaude() !== 'claude' || process.platform !== 'win32', model: model[0].toUpperCase() + model.slice(1), error: 'The chat needs Claude Code on this computer.' })
+    const family = /sonnet|haiku|opus|fable/i.exec(model)?.[0] ?? model
+    const ready = Boolean(options.ask || options.apiKey) || options.bin !== undefined || findClaude() !== 'claude' || process.platform !== 'win32'
+    json(response, 200, { ready, model: family[0].toUpperCase() + family.slice(1).toLowerCase(), usingKey: Boolean(options.apiKey), error: 'The chat needs Claude Code on this computer, or an API key in .env.local.' })
   }
 }
 

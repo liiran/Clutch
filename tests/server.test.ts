@@ -5,6 +5,7 @@ import { writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApi, type ApiOptions } from '../server/api.ts'
+import { askAnthropic } from '../server/anthropic-api.ts'
 import { askClaude, findClaude } from '../server/claude-cli.ts'
 import { SCHEMA, SYSTEM } from '../server/prompt.ts'
 import { COLORS } from '../src/core/colors.ts'
@@ -167,6 +168,84 @@ test('status reports ready when a model is wired up, and unknown paths pass thro
     assert.equal(status.model, 'Sonnet')
     assert.equal((await fetch(`${url}/nothing`)).status, 404)
   })
+})
+
+// A stand-in for the API: replies with a stream, and keeps what was sent.
+function fakeApi(reply: string, stopReason = 'end_turn', status = 200) {
+  const sent: Array<{ auth: string | null; beta: string | null; body: Record<string, any> }> = []
+  const respond: typeof fetch = async (_url, init) => {
+    const headers = new Headers(init!.headers)
+    sent.push({ auth: headers.get('authorization'), beta: headers.get('anthropic-beta'), body: JSON.parse(init!.body as string) })
+    if (status !== 200) return new Response(JSON.stringify({ type: 'error', error: { type: 'error', message: reply } }), { status, headers: { 'content-type': 'application/json' } })
+    const events = [
+      ['message_start', { type: 'message_start', message: { id: 'm', type: 'message', role: 'assistant', model: 'x', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1000, output_tokens: 0 } } }],
+      ['content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }],
+      ['content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: reply } }],
+      ['content_block_stop', { type: 'content_block_stop', index: 0 }],
+      ['message_delta', { type: 'message_delta', delta: { stop_reason: stopReason, stop_sequence: null }, usage: { input_tokens: 1000, output_tokens: 500 } }],
+      ['message_stop', { type: 'message_stop' }],
+    ]
+    return new Response(events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
+  }
+  return { fetch: respond, sent }
+}
+
+const quietly = async (run: () => Promise<void>) => {
+  const logged = console.log
+  const lines: string[] = []
+  console.log = (line: string) => { lines.push(line) }
+  try { await run() } finally { console.log = logged }
+  return lines
+}
+
+test('with a key the chat uses the API, not the CLI, and logs what it cost', async () => {
+  const api = fakeApi(JSON.stringify(good))
+  // A CLI that cannot run: if the chat tried it, the request would fail.
+  const lines = await quietly(() => withServer({ apiKey: 'test-key', model: 'sonnet', effort: 'low', fetch: api.fetch, bin: join(tmpdir(), 'no-such-program-here') }, async (url) => {
+    const status = await (await fetch(`${url}/api/clutch/status`)).json()
+    assert.deepEqual([status.ready, status.usingKey, status.model], [true, true, 'Sonnet'])
+    assert.ok(!JSON.stringify(status).includes('test-key'), 'the key never reaches the browser')
+    const response = await post(url, { message: 'Build a brick', bricks: [] })
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).reply, 'A brick.')
+  }))
+  assert.equal(api.sent.length, 1)
+  const [{ auth, beta, body }] = api.sent
+  assert.equal(auth, 'Bearer test-key')
+  assert.equal(body.model, 'claude-sonnet-5-5')
+  assert.equal(body.system, SYSTEM)
+  assert.equal(body.output_config.effort, 'low')
+  assert.deepEqual(body.output_config.format.schema, SCHEMA)
+  assert.equal(body.tools, undefined)
+  assert.equal(body.fallbacks, 'default')
+  assert.match(beta ?? '', /server-side-fallback-2026-07-01/)
+  assert.match(lines[0], /claude-sonnet-5-5: 1000 tokens in, 500 out, about \$0\.007/)
+})
+
+test('Haiku is named in full, with no fallback, and a full model name is used as it is', async () => {
+  const haiku = fakeApi(JSON.stringify(good))
+  await quietly(() => askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', model: 'haiku', fetch: haiku.fetch }).then(() => {}))
+  assert.equal(haiku.sent[0].body.model, 'claude-haiku-5-5')
+  assert.equal(haiku.sent[0].body.fallbacks, undefined)
+  const pinned = fakeApi(JSON.stringify(good))
+  await quietly(() => askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', model: 'claude-sonnet-4-6', fetch: pinned.fetch }).then(() => {}))
+  assert.equal(pinned.sent[0].body.model, 'claude-sonnet-4-6')
+})
+
+test('API problems the person can fix get their own message', async () => {
+  const failing = (message: string, status: number) => askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', fetch: fakeApi(message, 'end_turn', status).fetch })
+  await assert.rejects(failing('invalid x-api-key', 401), { name: 'ClaudeUnavailableError', message: /key was rejected/ })
+  await assert.rejects(failing('Your credit balance is too low', 400), { name: 'ClaudeUnavailableError', message: /out of credits/ })
+  await quietly(async () => {
+    await assert.rejects(askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', fetch: fakeApi('{}', 'refusal').fetch }), { name: 'ClaudeUnavailableError', message: /declined/ })
+    await assert.rejects(askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', fetch: fakeApi('{"re', 'max_tokens').fetch }), /stopped early/)
+  })
+})
+
+test('a CLI reply with usage is logged, so its cost can be compared', async () => {
+  const cli = fakeCli(`console.log(JSON.stringify({ is_error: false, subtype: 'success', structured_output: { ok: 1 }, total_cost_usd: 0.012, usage: { input_tokens: 40, output_tokens: 90 } }))`)
+  const lines = await quietly(() => askClaude({ system: 's', prompt: 'p', schema: {} }, { ...cli, model: 'sonnet' }).then(() => {}))
+  assert.match(lines[0], /CLI sonnet: 40 tokens in, 90 out, about \$0\.012/)
 })
 
 function fakeCli(script: string) {

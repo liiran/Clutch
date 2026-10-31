@@ -10,7 +10,7 @@
 
 ## Start it
 
-You need [Node.js](https://nodejs.org) 22 or newer. The chat also needs [Claude Code](https://claude.com/claude-code) installed and signed in on your computer.
+You need [Node.js](https://nodejs.org) 22 or newer. The chat also needs either [Claude Code](https://claude.com/claude-code) signed in on your computer, or your own [API key](#the-chat-and-what-it-costs).
 
 ```bash
 npm install
@@ -78,15 +78,19 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 
 ## The chat and what it costs
 
-The chat runs through the Claude Code CLI signed in on your computer, using Claude Sonnet by default. There is no API key to set up. With a Claude subscription, each message counts toward your plan's usage limits rather than being billed separately. Everything else, including building by hand and Replay, makes no AI calls at all.
+The chat can run two ways, using Claude Sonnet by default. Everything else, including building by hand and Replay, makes no AI calls at all.
 
-The model can only return build instructions: it has no tools, so it cannot touch your files or run commands.
+- **Claude Code (the default):** it runs through the CLI signed in on your computer, with nothing to set up. With a Claude subscription, each message counts toward your plan's usage limits rather than being billed separately.
+- **Your own API key:** put an Anthropic API key in `.env.local` and the chat uses it instead, with no need for Claude Code. The key stays on the local server and never reaches the browser. Each request is billed to your API account, which a Claude subscription does not cover, so set a spend limit in the [Claude Console](https://console.anthropic.com).
 
-To change the model, copy `.env.example` to `.env.local`:
+The chat panel shows which one is in use, and the server's log shows the tokens and approximate cost of each request. Either way, the model can only return build instructions: it has no tools, so it cannot touch your files or run commands.
+
+To set these, copy `.env.example` to `.env.local` and restart the server:
 
 | Setting | Effect |
 |---|---|
-| `CLUTCH_CLAUDE_MODEL` | `sonnet` by default, which follows the latest Sonnet. Use a full name, such as `claude-sonnet-4-6`, to pin one. |
+| `CLUTCH_API_KEY` | Your Anthropic API key. Leave it empty to use Claude Code. |
+| `CLUTCH_CLAUDE_MODEL` | `sonnet` by default. `haiku` is the cheapest and `opus` the strongest, or use a full name, such as `claude-sonnet-4-6`, to pin one. |
 | `CLUTCH_CLAUDE_EFFORT` | `medium` by default. Higher builds better and takes longer. |
 | `CLUTCH_CLAUDE_BIN` | The path to `claude`, if it cannot be found automatically. |
 
@@ -110,8 +114,10 @@ To change the model, copy `.env.example` to `.env.local`:
                         |
                         v
              +---------------------+
-             |    Claude Code CLI  |   no tools, and the reply must match
+             |  Claude Code or API |   no tools, and the reply must match
              |  server/claude-cli  |   a JSON schema of actions
+             |  server/anthropic-  |
+             |  api                |
              +---------------------+
                         |
                         v
@@ -149,7 +155,7 @@ src/core/      the rules, with no browser code; the server runs them too
   steps.ts       build order and the parts list
 src/render/    Three.js: the stage, generated models, instancing, sound, thumbnails
 src/app/       the editor: store, tools, sidebar, chat, replay, projects, landing
-server/        the local chat API, the CLI adapter and the prompt
+server/        the local chat API, the CLI and API key adapters, and the prompt
 tests/         unit and server tests; e2e/ drives the real editor in Chrome
 bench/         real requests through the real chat, and the README's recordings
 ```
@@ -157,7 +163,7 @@ bench/         real requests through the real chat, and the README's recordings
 ## Development
 
 ```bash
-npm test            # the rules, the server and the CLI adapter
+npm test            # the rules, the server and both chat adapters
 npm run test:e2e    # the real editor in Chrome (needs npm run dev running)
 npm run perf        # frame times on a 3000 piece build
 npm run landing     # what the landing page costs (CLUTCH_SOFTWARE=1 for no GPU)
