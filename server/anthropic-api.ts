@@ -10,10 +10,11 @@ export interface ApiKeyOptions {
   model?: string
   effort?: string
   fetch?: typeof fetch // replaces the network, for tests
+  onModel?: (id: string) => void // told which model actually answered
 }
 
 // The same short names the CLI takes. Any other value is used as a full model name.
-const MODELS: Record<string, string> = { sonnet: 'claude-sonnet-5-5', haiku: 'claude-haiku-5-5', opus: 'claude-opus-5-5' }
+export const MODELS: Record<string, string> = { sonnet: 'claude-sonnet-5-5', haiku: 'claude-haiku-5-5', opus: 'claude-opus-5-5' }
 
 // Dollars per million tokens, in and out, for the cost shown in the server's log.
 const PRICES: Record<string, [number, number]> = {
@@ -63,6 +64,7 @@ export async function askAnthropic(request: ClaudeRequest, options: ApiKeyOption
   } catch (error) {
     throw explain(error)
   }
+  options.onModel?.(message.model)
   const { input_tokens: input, output_tokens: output } = message.usage
   const price = PRICES[model]
   logUsage(`API ${model}`, input, output, price ? (input * price[0] + output * price[1]) / 1e6 : null)

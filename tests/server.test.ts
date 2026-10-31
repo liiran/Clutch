@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createApi, type ApiOptions } from '../server/api.ts'
+import { createApi, modelLabel, type ApiOptions } from '../server/api.ts'
 import { askAnthropic } from '../server/anthropic-api.ts'
 import { askClaude, findClaude } from '../server/claude-cli.ts'
 import { SCHEMA, SYSTEM } from '../server/prompt.ts'
@@ -165,7 +165,7 @@ test('status reports ready when a model is wired up, and unknown paths pass thro
   await withServer({ ask: async () => good, model: 'sonnet' }, async (url) => {
     const status = await (await fetch(`${url}/api/clutch/status`)).json()
     assert.equal(status.ready, true)
-    assert.equal(status.model, 'Sonnet')
+    assert.equal(status.model, 'Sonnet 5.5')
     assert.equal((await fetch(`${url}/nothing`)).status, 404)
   })
 })
@@ -203,7 +203,7 @@ test('with a key the chat uses the API, not the CLI, and logs what it cost', asy
   // A CLI that cannot run: if the chat tried it, the request would fail.
   const lines = await quietly(() => withServer({ apiKey: 'test-key', model: 'sonnet', effort: 'low', fetch: api.fetch, bin: join(tmpdir(), 'no-such-program-here') }, async (url) => {
     const status = await (await fetch(`${url}/api/clutch/status`)).json()
-    assert.deepEqual([status.ready, status.usingKey, status.model], [true, true, 'Sonnet'])
+    assert.deepEqual([status.ready, status.usingKey, status.model], [true, true, 'Sonnet 5.5'])
     assert.ok(!JSON.stringify(status).includes('test-key'), 'the key never reaches the browser')
     const response = await post(url, { message: 'Build a brick', bricks: [] })
     assert.equal(response.status, 200)
@@ -239,6 +239,22 @@ test('API problems the person can fix get their own message', async () => {
   await quietly(async () => {
     await assert.rejects(askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', fetch: fakeApi('{}', 'refusal').fetch }), { name: 'ClaudeUnavailableError', message: /declined/ })
     await assert.rejects(askAnthropic({ system: 's', prompt: 'p', schema: {} }, { apiKey: 'k', fetch: fakeApi('{"re', 'max_tokens').fetch }), /stopped early/)
+  })
+})
+
+test('the label names the version, and follows the model that actually answered', async () => {
+  assert.equal(modelLabel('sonnet'), 'Sonnet 5.5')
+  assert.equal(modelLabel('haiku'), 'Haiku 5.5')
+  assert.equal(modelLabel('claude-opus-5-5'), 'Opus 5.5')
+  assert.equal(modelLabel('claude-sonnet-4-6'), 'Sonnet 4.6')
+  assert.equal(modelLabel('claude-sonnet-5'), 'Sonnet 5')
+  assert.equal(modelLabel('claude-sonnet-4-5-20250929'), 'Sonnet 4.5')
+  assert.equal(modelLabel('something-else'), 'something-else')
+  const cli = fakeCli(`console.log(JSON.stringify({ is_error: false, subtype: 'success', structured_output: { reply: 'Hi.', actions: [] }, modelUsage: { 'claude-sonnet-6-0': {} } }))`)
+  await withServer({ ...cli, model: 'sonnet' }, async (url) => {
+    assert.equal((await (await fetch(`${url}/api/clutch/status`)).json()).model, 'Sonnet 5.5')
+    await post(url, { message: 'hi', bricks: [] })
+    assert.equal((await (await fetch(`${url}/api/clutch/status`)).json()).model, 'Sonnet 6.0')
   })
 })
 

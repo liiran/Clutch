@@ -6,11 +6,19 @@ import { Grid } from '../src/core/grid.ts'
 import { MAX_PIECES, isRot, type Brick } from '../src/core/model.ts'
 import { COLOR } from '../src/core/colors.ts'
 import { PART } from '../src/core/parts.ts'
-import { askAnthropic } from './anthropic-api.ts'
+import { MODELS, askAnthropic } from './anthropic-api.ts'
 import { askClaude, findClaude, type ClaudeOptions } from './claude-cli.ts'
 import { SCHEMA, SYSTEM } from './prompt.ts'
 
 export type Ask = (prompt: string, signal: AbortSignal) => Promise<unknown>
+
+// "claude-sonnet-5-5" reads as "Sonnet 5.5". Anything else is shown as it is.
+export function modelLabel(id: string) {
+  const name = MODELS[id] ?? id
+  const match = /(sonnet|haiku|opus|fable)-(\d+)(?:-(\d{1,2}))?(?!\d)/i.exec(name)
+  if (!match) return name
+  return `${match[1][0].toUpperCase()}${match[1].slice(1).toLowerCase()} ${match[2]}${match[3] ? `.${match[3]}` : ''}`
+}
 
 export interface ApiOptions extends ClaudeOptions {
   ask?: Ask // replaces the model, for tests
@@ -141,7 +149,11 @@ export function createChatHandler(options: ApiOptions = {}) {
   }
 }
 
-export function createApi(options: ApiOptions = {}) {
+export function createApi(given: ApiOptions = {}) {
+  // Until a reply comes back, "sonnet" means the version named in anthropic-api.ts. The CLI
+  // follows the latest, so the label then shows the model that actually answered.
+  let answered = ''
+  const options: ApiOptions = { ...given, onModel: (id) => { answered = id } }
   const chat = createChatHandler(options)
   return async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
     const path = request.url?.split('?')[0]
@@ -152,9 +164,8 @@ export function createApi(options: ApiOptions = {}) {
     if (origin && origin !== `http://${request.headers.host}`) { json(response, 403, { error: 'Only this editor can use the chat.' }); return }
     if (path === '/api/clutch/chat') { await chat(request, response); return }
     const model = options.model || 'sonnet'
-    const family = /sonnet|haiku|opus|fable/i.exec(model)?.[0] ?? model
     const ready = Boolean(options.ask || options.apiKey) || options.bin !== undefined || findClaude() !== 'claude' || process.platform !== 'win32'
-    json(response, 200, { ready, model: family[0].toUpperCase() + family.slice(1).toLowerCase(), usingKey: Boolean(options.apiKey), error: 'The chat needs Claude Code on this computer, or an API key in .env.local.' })
+    json(response, 200, { ready, model: modelLabel(answered || model), usingKey: Boolean(options.apiKey), error: 'The chat needs Claude Code on this computer, or an API key in .env.local.' })
   }
 }
 

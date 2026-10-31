@@ -14,6 +14,7 @@ export interface ClaudeOptions {
   binArgs?: string[] // placed before the CLI's own arguments (used by tests)
   model?: string
   effort?: string
+  onModel?: (id: string) => void // told which model actually answered
 }
 
 export interface ClaudeRequest {
@@ -73,12 +74,14 @@ export async function askClaude(request: ClaudeRequest, options: ClaudeOptions =
     '--strict-mcp-config',
   ]
   const stdout = await run(options.bin || findClaude(), [...(options.binArgs ?? []), ...args], request.prompt, request.signal)
-  let envelope: { is_error?: boolean; subtype?: string; result?: string; structured_output?: unknown; total_cost_usd?: number; usage?: { input_tokens: number; output_tokens: number } }
+  let envelope: { is_error?: boolean; subtype?: string; result?: string; structured_output?: unknown; total_cost_usd?: number; usage?: { input_tokens: number; output_tokens: number }; modelUsage?: Record<string, unknown> }
   try {
     envelope = JSON.parse(stdout)
   } catch {
     throw new Error('Claude Code returned output that is not JSON.')
   }
+  const answered = Object.keys(envelope.modelUsage ?? {})[0]
+  if (answered) options.onModel?.(answered)
   // What the same request would cost on an API key. The signed-in plan is not charged per request.
   if (envelope.usage) logUsage(`CLI ${options.model || 'sonnet'}`, envelope.usage.input_tokens, envelope.usage.output_tokens, envelope.total_cost_usd ?? null)
   if (envelope.is_error || envelope.subtype !== 'success') throw new Error(`Claude Code did not finish the reply: ${envelope.result ?? envelope.subtype ?? 'unknown'}`)

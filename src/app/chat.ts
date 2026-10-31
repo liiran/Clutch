@@ -218,6 +218,7 @@ export class Chat {
         this.controller = null
         this.setBusy(false)
       }
+      void this.loadStatus() // the reply may have come from a newer version of the model
     }
   }
 
