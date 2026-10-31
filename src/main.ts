@@ -60,7 +60,7 @@ tools.onLabel = (text, warn) => {
   label.classList.toggle('warn', warn)
 }
 
-// ── Tool rail, top bar and state ───────────────────────────────
+// ── Tool rail, actions and state ───────────────────────────────
 const railButtons = document.querySelectorAll<HTMLButtonElement>('[data-mode]')
 railButtons.forEach((button) => button.addEventListener('click', () => tools.setMode(button.dataset.mode as Mode)))
 
@@ -184,14 +184,10 @@ const lockWhile = () => tools.setLocked(replay.active || chat.isPreviewing)
 replay.onChange = () => {
   lockWhile()
   root.classList.toggle('is-replaying', replay.active)
-  const button = $('build-play')
-  button.classList.toggle('is-stop', replay.active)
-  button.innerHTML = `${icon(replay.active ? 'close' : 'play', 12, 2.4)} ${replay.active ? 'Stop' : 'Replay'}`
   refreshCounts()
   refreshHistory()
 }
 $('build-play').addEventListener('click', () => {
-  if (replay.active) { replay.stop(); return }
   tools.cancelLift()
   showView('build')
   replay.start()
@@ -203,19 +199,45 @@ chat.onAsk = () => {
   showView('build')
 }
 chat.onPreviewChange = (open) => {
-  if (open) showView('build')
+  if (open) {
+    showView('build')
+    setChatHidden(false) // Apply and Discard are in the chat
+  }
   lockWhile()
   refreshHistory()
   refreshCounts()
 }
 
-// ── Top bar commands ───────────────────────────────────────────
+// ── Hiding the chat ────────────────────────────────────────────
+function setChatHidden(hidden: boolean) {
+  root.classList.toggle('chat-hidden', hidden)
+  $('chat-show').hidden = !hidden
+  localStorage.setItem('clutch_chat_hidden', hidden ? '1' : '')
+}
+setChatHidden(Boolean(localStorage.getItem('clutch_chat_hidden')))
+const toggleChat = () => {
+  if (!chat.isPreviewing) setChatHidden(!root.classList.contains('chat-hidden'))
+}
+$('chat-hide').addEventListener('click', toggleChat)
+$('chat-show').addEventListener('click', toggleChat)
+
+// ── Commands ───────────────────────────────────────────────────
 // Picking a part means building, so it brings the model back.
 $('part-list').addEventListener('click', (event) => {
   if ((event.target as HTMLElement).closest('.part-tile')) showView('build')
 })
 $('undo').addEventListener('click', () => store.undo())
 $('redo').addEventListener('click', () => store.redo())
+const buildsBtn = $('builds-btn'), buildsMenu = $('builds-menu')
+function showBuildsMenu(show: boolean) {
+  buildsMenu.hidden = !show
+  buildsBtn.setAttribute('aria-expanded', String(show))
+}
+buildsBtn.addEventListener('click', () => showBuildsMenu(Boolean(buildsMenu.hidden)))
+buildsMenu.addEventListener('click', () => showBuildsMenu(false))
+document.addEventListener('pointerdown', (event) => {
+  if (!(event.target as HTMLElement).closest('.menu-wrap')) showBuildsMenu(false)
+})
 $('open').addEventListener('click', () => {
   tools.cancelLift()
   replay.stop()
@@ -244,7 +266,8 @@ document.addEventListener('keydown', (event) => {
   const el = document.activeElement as HTMLElement | null
   if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
   if (event.key === '?') helpCard.hidden = !helpCard.hidden
-  if (event.key === 'Escape') helpCard.hidden = true
+  if (event.key === 'Escape') { helpCard.hidden = true; showBuildsMenu(false) }
+  if (event.key.toLowerCase() === 'h' && !event.ctrlKey && !event.metaKey && !event.altKey && !root.classList.contains('scene')) toggleChat()
 })
 
 // ── Clearing ───────────────────────────────────────────────────

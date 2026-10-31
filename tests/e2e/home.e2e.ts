@@ -22,15 +22,15 @@ after(async () => { await browser.close() })
 
 test('the landing shows only the scene, and sliding off the button cancels', async () => {
   page = await open(browser, '/')
-  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('topbar')!).position), 'fixed', 'the styles are in before the scripts run')
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('sidebar')!).position), 'fixed', 'the styles are in before the scripts run')
   await wait(3200)
   await shot(page, 'home')
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('scene')), true)
-  const panels = await page.evaluate(() => ['topbar', 'sidebar', 'chat'].map((id) => {
+  const panels = await page.evaluate(() => ['sidebar', 'chat'].map((id) => {
     const rect = document.getElementById(id)!.getBoundingClientRect()
     return rect.right <= 0 || rect.left >= window.innerWidth || rect.bottom <= 0
   }))
-  assert.deepEqual(panels, [true, true, true], 'the panels are off screen')
+  assert.deepEqual(panels, [true, true], 'the panels are off screen')
 
   const at = await buttonAt()
   await page.mouse.move(at.x, at.y)
@@ -40,6 +40,35 @@ test('the landing shows only the scene, and sliding off the button cancels', asy
   await page.mouse.up()
   await wait(300)
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('scene')), true, 'still on the landing')
+})
+
+test('the title waits for its last brick, with a ghost in the gap', async () => {
+  const seen = await page.evaluate(() => {
+    const { stage } = (window as any).clutch
+    let ghosts = 0
+    stage.scene.traverse((object: any) => {
+      if (object.isMesh && object.visible && object.material.transparent && object.material.opacity === 0.32) ghosts++
+    })
+    return ghosts
+  })
+  assert.equal(seen, 1)
+})
+
+test('clicking the ghost brick opens the editor too', async () => {
+  const other = await open(browser, '/')
+  await wait(2400)
+  const at = await other.evaluate(() => {
+    const { stage } = (window as any).clutch
+    const p = stage.camera.position.clone().set(4, 5.4, -10).project(stage.camera)
+    const rect = stage.canvas.getBoundingClientRect()
+    return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
+  })
+  await other.mouse.click(at.x, at.y)
+  await wait(2200)
+  assert.equal(await other.evaluate(() => document.documentElement.classList.contains('scene')), false)
+  assert.equal(await other.evaluate(() => location.search), '?edit')
+  assert.deepEqual(other.errors, [])
+  await other.close()
 })
 
 test('pressing the button turns the scene into the editor in place', async () => {
@@ -72,7 +101,7 @@ test('pressing the button turns the scene into the editor in place', async () =>
   assert.doesNotMatch(result.scene, /scene|entering/)
   assert.equal(result.locked, false)
   assert.equal(result.fits, true)
-  assert.equal(result.sidebar, 0)
+  assert.equal(result.sidebar, 8, 'the panels sit in the frame')
   assert.equal(result.aspect, true)
 })
 

@@ -27,6 +27,11 @@ const screenOf = (x: number, z: number, y = 0) => page.evaluate((cx: number, cz:
   return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height }
 }, x, z, y)
 
+const openBuilds = async () => {
+  await page.click('#builds-btn')
+  await page.click('#open')
+}
+
 const clickAt = async (x: number, z: number, y = 0) => {
   const at = await screenOf(x, z, y)
   await page.mouse.move(at.x, at.y)
@@ -49,6 +54,7 @@ const reset = async () => {
     stage.controls.update()
   })
   await page.keyboard.press('Escape')
+  await page.click('[data-category="Bricks"]')
   await wait(40)
 }
 
@@ -135,6 +141,7 @@ test('the ghost stays on the plate at the edge', async () => {
 
 test('undo and redo walk the history, by keyboard and buttons', async () => {
   await reset()
+  await page.click('[data-category="Plates"]')
   await page.click('.part-tile[title="Plate 2×2"]')
   await clickAt(10, 10)
   await clickAt(20, 20)
@@ -426,7 +433,7 @@ test('the Open dialog lists builds and makes new ones', async () => {
   await clickAt(32, 32)
   await page.keyboard.press('Escape')
   await wait(900)
-  await page.click('#open')
+  await openBuilds()
   await wait(200)
   assert.ok((await page.$$('.project-card[data-open]')).length >= 1)
   await shot(page, 'open-dialog')
@@ -486,6 +493,57 @@ test('clear asks first, and undo brings it back', async () => {
   assert.equal((await state()).count, 1)
 })
 
+test('the chat can be hidden and comes back, including for a preview', async () => {
+  await reset()
+  const width = () => page.$eval('#viewport', (el) => el.getBoundingClientRect().width)
+  const before = await width()
+  await page.click('#chat-hide')
+  await wait(100)
+  assert.equal(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none')
+  assert.ok(await width() > before + 300, 'the 3D view takes the room')
+  await page.keyboard.press('h')
+  await wait(100)
+  assert.notEqual(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none')
+  await page.click('#chat-hide')
+  await page.evaluate(() => (window as any).clutch.chat.preview([{ tool: 'place', part: 'brick_2x4', color: 'red', at: [[0, 0, 0]] }]))
+  await wait(100)
+  assert.notEqual(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none', 'Apply and Discard are in the chat')
+  await page.click('#chat-decline')
+})
+
+test('My builds holds saved builds, download and share, and closes itself', async () => {
+  await reset()
+  const menuHidden = () => page.$eval('#builds-menu', (el) => (el as HTMLElement).hidden)
+  assert.equal(await menuHidden(), true)
+  await page.click('#builds-btn')
+  assert.equal(await menuHidden(), false)
+  await page.keyboard.press('Escape')
+  assert.equal(await menuHidden(), true)
+  await openBuilds()
+  await wait(100)
+  assert.equal(await menuHidden(), true)
+  await page.click('[data-do="close"]')
+})
+
+test('the parts menu shows one category, search looks through them all, and a picked-up part opens its own', async () => {
+  await reset()
+  const shownSections = () => page.$$eval('.part-section', (all) => all.filter((el) => !(el as HTMLElement).hidden).map((el) => el.querySelector('h3')!.textContent))
+  assert.deepEqual(await shownSections(), ['Bricks'])
+  await page.click('[data-category="Slopes"]')
+  assert.deepEqual(await shownSections(), ['Slopes'])
+  await page.type('#part-search', '2x2')
+  assert.ok((await shownSections()).length > 1)
+  await page.click('[data-category="Round"]')
+  assert.deepEqual(await shownSections(), ['Round'])
+  assert.equal(await page.$eval('#part-search', (el) => (el as HTMLInputElement).value), '')
+  await page.evaluate(() => (window as any).clutch.tools.pickPart('brick_2x4'))
+  assert.deepEqual(await shownSections(), ['Bricks'])
+  // Pictures drawn while closed are square, not stretched.
+  const sizes = await page.$$eval('.part-thumb', (all) => all.map((el) => (el as HTMLCanvasElement).width === (el as HTMLCanvasElement).height))
+  assert.ok(sizes.every(Boolean))
+  await page.keyboard.press('Escape')
+})
+
 test('typing in the chat during a replay stays in the chat', async () => {
   await reset()
   await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }], 'load'))
@@ -505,12 +563,12 @@ test('Open stops a replay, and opening a build clears the selection', async () =
   await page.evaluate(() => (window as any).clutch.store.commit([{ id: 1, part: 'brick_2x4', color: 'red', x: 3, y: 0, z: 3, rot: 0 }, { id: 2, part: 'brick_2x4', color: 'blue', x: 9, y: 0, z: 3, rot: 0 }], 'load'))
   await wait(900)
   await page.click('#build-play')
-  await page.click('#open')
+  await openBuilds()
   await wait(150)
   assert.equal((await state()).replaying, false)
   await page.click('[data-do="close"]')
   await page.evaluate(() => (window as any).clutch.tools.select(1))
-  await page.click('#open')
+  await openBuilds()
   await wait(100)
   await page.click('.project-card[data-open]')
   await wait(100)

@@ -1,8 +1,9 @@
-// The parts menu on the left: search, parts by category, and the colour palette.
-// Every picture is drawn from the real model in the current colour.
+// The parts menu on the left: search, a column of categories with the open one's parts
+// beside it, and the colour palette. Every picture is drawn from the real model in the
+// current colour. A search looks through every category.
 
 import { COLORS } from '../core/colors.ts'
-import { CATEGORIES, PARTS, type PartDef } from '../core/parts.ts'
+import { CATEGORIES, PART, PARTS, type PartDef } from '../core/parts.ts'
 import { drawThumb } from '../render/thumbs.ts'
 import type { Tools } from './tools.ts'
 
@@ -18,8 +19,11 @@ const label = (part: PartDef) => part.name
 export class Sidebar {
   private tools: Tools
   private tiles = new Map<string, { button: HTMLButtonElement; canvas: HTMLCanvasElement }>()
+  private tabs = new Map<string, { button: HTMLButtonElement; canvas: HTMLCanvasElement; part: string }>()
+  private category: string = CATEGORIES[0]
+  private searching = false
   private swatches = new Map<string, HTMLButtonElement>()
-  private sections: Array<{ el: HTMLElement; parts: PartDef[] }> = []
+  private sections: Array<{ el: HTMLElement; parts: PartDef[]; category: string }> = []
   private drawnColor = ''
   private drawing = 0
   private canDraw = false
@@ -27,8 +31,17 @@ export class Sidebar {
   constructor(tools: Tools) {
     this.tools = tools
     const list = document.getElementById('part-list')!
+    const tabs = document.getElementById('part-tabs')!
     for (const category of CATEGORIES) {
       const parts = PARTS.filter((part) => part.category === category)
+      const tab = document.createElement('button')
+      tab.className = 'part-tab'
+      tab.dataset.category = category
+      const picture = document.createElement('canvas')
+      tab.append(picture, category)
+      tab.addEventListener('click', () => this.openCategory(category))
+      tabs.append(tab)
+      this.tabs.set(category, { button: tab, canvas: picture, part: parts[0].id })
       const section = document.createElement('section')
       section.className = 'part-section'
       section.innerHTML = `<h3 class="section-label">${category}</h3>`
@@ -54,8 +67,9 @@ export class Sidebar {
       }
       section.append(grid)
       list.append(section)
-      this.sections.push({ el: section, parts })
+      this.sections.push({ el: section, parts, category })
     }
+    this.openCategory(this.category)
 
     const palette = document.getElementById('palette')!
     for (const color of COLORS) {
@@ -80,8 +94,18 @@ export class Sidebar {
     })
   }
 
+  private openCategory(category: string) {
+    this.category = category
+    const search = document.getElementById('part-search') as HTMLInputElement
+    if (search.value) search.value = ''
+    this.filter('')
+    document.getElementById('part-list')!.scrollTop = 0
+  }
+
   private filter(text: string) {
     const words = text.toLowerCase().replace(/[x×]/g, '×').split(/\s+/).filter(Boolean)
+    this.searching = words.length > 0
+    for (const [category, tab] of this.tabs) tab.button.classList.toggle('active', !this.searching && category === this.category)
     let any = false
     for (const section of this.sections) {
       let shown = 0
@@ -91,7 +115,7 @@ export class Sidebar {
         this.tiles.get(part.id)!.button.hidden = !match
         if (match) shown++
       }
-      section.el.hidden = shown === 0
+      section.el.hidden = this.searching ? shown === 0 : section.category !== this.category
       any ||= shown > 0
     }
     document.getElementById('part-empty')!.hidden = any
@@ -102,7 +126,8 @@ export class Sidebar {
     if (!this.canDraw || this.drawnColor === color) return
     this.drawnColor = color
     const run = ++this.drawing
-    const queue = [...this.tiles.entries()]
+    const queue: Array<[string, { canvas: HTMLCanvasElement }]> = [...this.tabs.values()].map((tab) => [tab.part, tab])
+    queue.push(...this.tiles.entries())
     const step = () => {
       if (run !== this.drawing) return
       const until = performance.now() + 6
@@ -122,6 +147,8 @@ export class Sidebar {
 
   refresh() {
     const { mode, part, color } = this.tools
+    // Picking up a part from the build opens its category, so its tile can be seen.
+    if (mode === 'place' && !this.searching && PART.get(part)!.category !== this.category) this.openCategory(PART.get(part)!.category)
     for (const [id, tile] of this.tiles) tile.button.classList.toggle('active', mode === 'place' && part === id)
     for (const [id, swatch] of this.swatches) swatch.classList.toggle('active', color === id)
     this.drawAll(color)

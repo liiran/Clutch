@@ -302,6 +302,7 @@ async function byHand() {
   await clickOn(page, '#palette .swatch[title="Red"]', 500)
   await page.evaluate(() => (document.querySelector('#part-list') as HTMLElement).scrollTop = 1250)
   await wait(200)
+  await clickOn(page, '[data-category="Slopes"]', 300)
   await clickOn(page, '.part-tile[title="Slope 2×2"]', 450)
   await plateClick(page, 31, 32, 6)
   await plateClick(page, 36, 31, 6)

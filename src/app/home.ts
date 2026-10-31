@@ -1,6 +1,8 @@
-// The landing scene: the title drops onto the baseplate in chunky bricks of mixed sizes,
-// and a big button opens the editor. It is kept deliberately light. Hidden studs are never
-// made, the little garden is one mesh, and nothing draws once the title has landed.
+// The landing scene: the title drops onto the baseplate in chunky bricks of mixed sizes, one
+// brick short, with a ghost where the last one goes. Pressing the big button, or clicking the
+// ghost, drops that brick into place and opens the editor. It is kept deliberately light.
+// Hidden studs are never made, the little garden is one mesh, and nothing draws once the
+// title has landed.
 //
 // It is the editor with its panels off screen, so opening it needs no new page: the title
 // leaves, the camera glides and the panels slide in.
@@ -22,11 +24,13 @@ const p = (x: number, w: number, y: number, h: number): Piece => ({ x, w, y, h }
 // Every letter is 15 plates tall, made of tall, medium and small bricks that differ from
 // one stroke to the next. The H's left side is one big brick and a small one, and its
 // right side two medium ones.
+// The last brick is the right half of the T's bar.
+const LAST_BRICK = p(3, 2, 12, 3)
 const LETTERS: Letter[] = [
   { color: 'red', width: 4, pieces: [p(0, 4, 0, 3), p(0, 1, 3, 6), p(0, 1, 9, 3), p(0, 3, 12, 3), p(3, 1, 12, 3)] },
   { color: 'yellow', width: 4, pieces: [p(1, 3, 0, 3), p(0, 1, 0, 9), p(0, 1, 9, 6)] },
   { color: 'white', width: 4, pieces: [p(0, 4, 0, 3), p(0, 1, 3, 9), p(0, 1, 12, 3), p(3, 1, 3, 3), p(3, 1, 6, 9)] },
-  { color: 'blue', width: 5, pieces: [p(2, 1, 0, 3), p(2, 1, 3, 9), p(0, 3, 12, 3), p(3, 2, 12, 3)] },
+  { color: 'blue', width: 5, pieces: [p(2, 1, 0, 3), p(2, 1, 3, 9), p(0, 3, 12, 3), LAST_BRICK] },
   { color: 'orange', width: 4, pieces: [p(0, 2, 0, 3), p(2, 2, 0, 3), p(0, 1, 3, 3), p(0, 1, 6, 6), p(0, 4, 12, 3)] },
   { color: 'purple', width: 4, pieces: [p(0, 1, 0, 12), p(0, 1, 12, 3), p(3, 1, 0, 7), p(3, 1, 7, 8), p(1, 2, 6, 3)] },
 ]
@@ -34,6 +38,7 @@ const LETTERS: Letter[] = [
 const OFF = SIZE / 2
 const TITLE_Z = 21, TITLE_DEPTH = 2
 const FALL = 0.72
+const LAST_LIFT = 7, LAST_MS = 300
 const CAP_LENGTH = 30, CAP_DEPTH = 7.6, CAP_H = 1.1, BASE_H = 0.28, GUARD_H = 0.72, PRESS = 0.42
 
 interface Faller { mesh: THREE.Mesh; rest: number; start: number; landed: boolean }
@@ -47,7 +52,7 @@ function labelTexture(): THREE.CanvasTexture {
   texture.colorSpace = THREE.SRGBColorSpace
   const draw = () => {
     g.clearRect(0, 0, canvas.width, canvas.height)
-    g.font = "700 125px 'Space Grotesk', 'Inter', system-ui, sans-serif"
+    g.font = "700 125px 'Rubik', system-ui, sans-serif"
     g.textBaseline = 'middle'
     const text = 'Start building', mark = 66, gap = 35
     const total = g.measureText(text).width + gap + mark
@@ -64,7 +69,7 @@ function labelTexture(): THREE.CanvasTexture {
     texture.needsUpdate = true
   }
   draw()
-  void document.fonts?.load("700 125px 'Space Grotesk'").then(draw, () => {})
+  void document.fonts?.load("700 125px 'Rubik'").then(draw, () => {})
   return texture
 }
 
@@ -111,6 +116,8 @@ export class Home {
   private plants: THREE.Mesh
   private cap = new THREE.Group()
   private fallers: Faller[] = []
+  private lastBrick!: Faller
+  private ghost!: THREE.Mesh
   private materials = new Map<string, THREE.MeshPhongMaterial>()
   private hitMeshes: THREE.Mesh[] = []
   private capMaterial = new THREE.MeshPhongMaterial({ color: 0xf7d117, shininess: 40, specular: 0x444444 })
@@ -173,11 +180,22 @@ export class Home {
           const covered = letter.pieces.some((other) => other.y === piece.y + piece.h && cx >= other.x && cx < other.x + other.w)
           if (!covered) open.push(c)
         }
-        const mesh = new THREE.Mesh(pieceGeometry(piece.w, TITLE_DEPTH, piece.h, open), this.materialFor(letter.color))
+        const geometry = pieceGeometry(piece.w, TITLE_DEPTH, piece.h, open)
+        const mesh = new THREE.Mesh(geometry, this.materialFor(letter.color))
         const rest = piece.y * PLATE_H
         mesh.position.set(x + piece.x + piece.w / 2 - OFF, rest, TITLE_Z + TITLE_DEPTH / 2 - OFF)
         mesh.castShadow = true
         this.title.add(mesh)
+        if (piece === LAST_BRICK) {
+          mesh.visible = false
+          this.lastBrick = { mesh, rest, start: 0, landed: false }
+          this.ghost = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: COLOR.get(letter.color)!.hex, transparent: true, opacity: 0.32, depthWrite: false }))
+          this.ghost.position.copy(mesh.position)
+          this.ghost.visible = this.stage.reducedMotion
+          this.title.add(this.ghost)
+          this.hitMeshes.push(this.ghost)
+          continue
+        }
         this.fallers.push({ mesh, rest, start: order++ * 34, landed: false })
       }
       x += letter.width + 1
@@ -187,7 +205,7 @@ export class Home {
   private buildButton() {
     const L = CAP_LENGTH, D = CAP_DEPTH
     const dark = new THREE.MeshLambertMaterial({ color: 0x24262b })
-    const guard = new THREE.MeshPhongMaterial({ color: 0x8d9198, shininess: 30, specular: 0x444444 })
+    const guard = new THREE.MeshPhongMaterial({ color: 0x41454d, shininess: 30, specular: 0x444444 })
     const base = new THREE.Mesh(plainBox(-L / 2 - 1.1, L / 2 + 1.1, 0, BASE_H, -D / 2 - 1.1, D / 2 + 1.1, 0.06), dark)
     // The guard is four walls around the cap, as one mesh.
     const t = 0.55, gx = L / 2 + 0.75, gz = D / 2 + 0.75
@@ -215,7 +233,7 @@ export class Home {
     label.renderOrder = 1
     this.cap.position.y = BASE_H
     this.cap.add(cap, studs, label)
-    this.hitMeshes = [cap, label]
+    this.hitMeshes.push(cap, label)
     cap.castShadow = true
     base.castShadow = true
     this.button.add(base, walls, this.cap)
@@ -280,6 +298,7 @@ export class Home {
       if (now > lastStart + ms || this.leaving) {
         this.stage.removeTicker(tick)
         this.stage.invalidateShadows()
+        this.ghost.visible = true
       }
     }
     this.stage.addTicker(tick)
@@ -343,7 +362,30 @@ export class Home {
     this.moveCap(BASE_H - PRESS)
     this.listening.abort()
     this.stage.canvas.style.cursor = ''
-    window.setTimeout(() => void this.enter(), 130)
+    void this.placeLastBrick().then(() => this.enter())
+  }
+
+  // The last brick falls into its gap, and clicking in is what opens the editor.
+  private async placeLastBrick() {
+    const stage = this.stage
+    const { mesh, rest } = this.lastBrick
+    for (const faller of this.fallers) { // in case the title was still landing
+      faller.mesh.visible = true
+      faller.mesh.position.y = faller.rest
+    }
+    this.ghost.visible = true
+    mesh.visible = true
+    this.fallers.push(this.lastBrick)
+    if (!stage.reducedMotion) {
+      await stage.tween(LAST_MS, (k) => { mesh.position.y = rest + LAST_LIFT * (1 - k * k) })
+    }
+    mesh.position.y = rest
+    this.ghost.visible = false
+    playClick(0.8)
+    stage.invalidateShadows()
+    if (stage.reducedMotion) return
+    await stage.tween(170, (k) => { mesh.position.y = rest + 0.22 * Math.sin(Math.PI * k) })
+    await stage.tween(110, () => {})
   }
 
   private async enter() {
@@ -355,11 +397,12 @@ export class Home {
     // The panels slide in over the canvas while it keeps its size, and the camera's view
     // narrows to the space they leave. Nothing is resized until the end, so it stays smooth.
     const root = document.documentElement
-    const topbar = document.getElementById('topbar')!, side = document.getElementById('sidebar')!, chat = document.getElementById('chat')!
+    const side = document.getElementById('sidebar')!, chat = document.getElementById('chat')!
     const stacked = window.innerWidth <= 1024
     const fullW = window.innerWidth, fullH = window.innerHeight
-    const L = stacked ? 0 : side.offsetWidth, R = stacked ? 0 : chat.offsetWidth, T = topbar.offsetHeight
-    const B = stacked ? side.offsetHeight + chat.offsetHeight : 0
+    const gap = parseFloat(getComputedStyle(root).getPropertyValue('--gap'))
+    const L = stacked ? gap : side.offsetWidth + gap * 2, R = stacked ? gap : chat.offsetWidth + gap * (chat.offsetWidth ? 2 : 1), T = gap
+    const B = stacked ? side.offsetHeight + chat.offsetHeight + gap * 3 : gap
     const viewW = fullW - L - R, viewH = fullH - T - B
     root.classList.remove('scene')
     root.classList.add('entering')
@@ -375,7 +418,9 @@ export class Home {
         faller.mesh.scale.setScalar(Math.max(0.001, 1 - u * u))
       })
       this.plants.scale.y = Math.max(0.001, 1 - k * k)
+      this.plants.visible = k < 1
       this.button.position.y = -k * k * 3
+      stage.invalidateShadows() // or their shadows stay behind on the plate
     })
 
     const view = stage.defaultView(viewW / viewH)

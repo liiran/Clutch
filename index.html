@@ -10,7 +10,7 @@
   <style>
     /* Before anything else has loaded: the menu's colours, and its bricks dropping onto
        a little baseplate. Only transforms and opacity move, so it never needs the page. */
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1f24; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #14161a; }
     html:not(.ready) #app, html:not(.ready) .skip-link { visibility: hidden; }
     #boot { position: fixed; left: 50%; top: 50%; width: 126px; height: 96px; margin: -48px 0 0 -63px; pointer-events: none; z-index: 200; transform: scale(1.5); transition: opacity 0.25s ease; }
     html.ready #boot { opacity: 0; }
@@ -48,46 +48,22 @@
 <a id="skip-link" class="skip-link" href="?edit">Start building</a>
 <div id="app">
 
-  <header id="topbar">
-    <div class="topbar-left">
-      <a class="brand" href="/" title="Clutch">
-        <img class="brand-mark" src="/mark.svg" alt="" width="26" height="26" />
-        Clutch
-      </a>
-      <span class="topbar-sep">/</span>
-      <span id="name" contenteditable="true" spellcheck="false" role="textbox" aria-label="Build name" title="Click to rename">Untitled</span>
-    </div>
-
-    <div class="topbar-center">
-      <div class="seg" role="group" aria-label="View">
-        <button class="seg-btn active" data-view="build" data-icon="board" data-size="14" title="The 3D model"> Model</button>
-        <button class="seg-btn" data-view="parts" data-icon="list" data-size="14" title="Parts list and steps"> Parts</button>
-      </div>
-      <button id="build-play" class="btn-go" title="Replay the build going together, step by step" disabled data-icon="play" data-size="12"> Replay</button>
-    </div>
-
-    <div class="topbar-right">
-      <button id="undo" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" data-icon="undo" data-size="15"></button>
-      <button id="redo" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-icon="redo" data-size="15"></button>
-      <span class="topbar-divider"></span>
-      <button id="open" class="btn-secondary" title="Your saved builds" data-icon="open" data-size="13"> Open</button>
-      <button id="download" class="btn-secondary" title="Download as a .clutch file" data-icon="download" data-size="13"> Download</button>
-      <button id="share" class="btn-secondary" title="Copy a link to this build" data-icon="share" data-size="13"> Share</button>
-      <span class="topbar-divider"></span>
-      <button id="mute" class="icon-btn"></button>
-      <button id="help-btn" class="icon-btn" title="Controls (?)" aria-label="Controls" data-icon="help" data-size="15"></button>
-    </div>
-  </header>
-
   <div id="body">
 
     <aside id="sidebar" aria-label="Parts">
+      <a class="brand" href="/" title="Clutch">
+        <img class="brand-mark" src="/mark.svg" alt="" width="24" height="24" />
+        Clutch
+      </a>
       <div class="search">
         <span class="search-icon" data-icon="search" data-size="13"></span>
         <input id="part-search" type="search" placeholder="Search parts" aria-label="Search parts" autocomplete="off" />
       </div>
-      <div id="part-list">
-        <p id="part-empty" class="part-empty" hidden>No parts match that.</p>
+      <div class="part-browser">
+        <nav id="part-tabs" aria-label="Part categories"></nav>
+        <div id="part-list">
+          <p id="part-empty" class="part-empty" hidden>No parts match that.</p>
+        </div>
       </div>
       <div class="palette-wrap">
         <div id="palette" class="palette" role="group" aria-label="Colour"></div>
@@ -96,6 +72,32 @@
 
     <div id="viewport">
       <canvas id="canvas"></canvas>
+
+      <div id="nameplate">
+        <span id="name" contenteditable="true" spellcheck="false" role="textbox" aria-label="Build name" title="Click to rename">Untitled</span>
+        <span id="stats" hidden>
+          <span id="count">0 pieces</span>
+          <button id="loose" class="loose" title="Show the pieces that aren't attached to anything" hidden></button>
+        </span>
+      </div>
+
+      <div id="actions" class="glass">
+        <button id="undo" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" data-icon="undo" data-size="15"></button>
+        <button id="redo" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-icon="redo" data-size="15"></button>
+        <span class="actions-divider"></span>
+        <div class="menu-wrap">
+          <button id="builds-btn" class="actions-btn" aria-haspopup="menu" data-icon="open" data-size="14"> My builds</button>
+          <div id="builds-menu" class="glass" role="menu" hidden>
+            <button id="open" role="menuitem" title="Your saved builds" data-icon="open" data-size="14"> Saved builds</button>
+            <button id="download" role="menuitem" title="Download as a .clutch file" data-icon="download" data-size="14"> Download</button>
+            <button id="share" role="menuitem" title="Copy a link to this build" data-icon="share" data-size="14"> Share</button>
+          </div>
+        </div>
+        <span class="actions-divider"></span>
+        <button id="mute" class="icon-btn"></button>
+        <button id="help-btn" class="icon-btn" title="Controls (?)" aria-label="Controls" data-icon="help" data-size="15"></button>
+        <button id="chat-show" class="actions-btn" title="Show the chat (H)" data-icon="chat" data-size="14" hidden> Chat</button>
+      </div>
 
       <div id="rail" class="glass" role="toolbar" aria-label="Tools">
         <button class="rail-btn" data-mode="select" title="Select (V)" aria-label="Select" data-icon="select" data-size="17"></button>
@@ -107,17 +109,17 @@
 
       <div id="hint" class="glass is-hidden"><span id="hint-text"></span></div>
 
-      <div id="stats" class="glass" hidden>
-        <span id="count">0 pieces</span>
-        <button id="loose" class="loose" title="Show the pieces that aren't attached to anything" hidden></button>
-      </div>
-
       <div id="empty" class="empty-state">
         <div class="empty-title">An empty baseplate</div>
         <div class="empty-text">Pick a part on the left and click to place it, or ask the chat to build something.</div>
       </div>
 
       <div id="where" class="glass" hidden></div>
+
+      <div id="build-bar">
+        <button id="build-play" class="btn-go" title="Replay the build going together, step by step" disabled data-icon="play" data-size="12"> Replay</button>
+        <button class="glass tool-btn" data-view="parts" title="Parts list and steps" data-icon="list" data-size="13"> Parts list</button>
+      </div>
 
       <div class="view-tools">
         <div class="base-wrap">
@@ -159,6 +161,7 @@
           <dt>Alt + click</dt><dd>Pick up a part and its colour</dd>
           <dt>G / C</dt><dd>Move / copy the selected piece</dd>
           <dt>Del</dt><dd>Delete the selected piece</dd>
+          <dt>H</dt><dd>Hide or show the chat</dd>
           <dt>Esc</dt><dd>Stop, or deselect</dd>
           <dt>F</dt><dd>Frame the build</dd>
           <dt>Ctrl+Z / Ctrl+Y</dt><dd>Undo / redo</dd>
@@ -172,8 +175,11 @@
     <section id="parts-view" hidden aria-label="Parts list and steps">
       <div class="parts-inner">
         <header class="parts-head">
-          <h2>Parts</h2>
-          <p id="parts-summary"></p>
+          <div>
+            <h2>Parts</h2>
+            <p id="parts-summary"></p>
+          </div>
+          <button class="btn-secondary" data-view="build" data-icon="board" data-size="13"> Back to the model</button>
         </header>
         <div class="parts-columns">
           <div id="parts-list" class="parts-list"></div>
@@ -188,11 +194,14 @@
     <aside id="chat" aria-label="Chat">
       <div class="chat-header">
         <span id="chat-status" class="chat-status"></span>
-        <button id="chat-new" class="icon-btn" title="New chat" aria-label="New chat" data-icon="plus" data-size="15"></button>
+        <div class="chat-header-btns">
+          <button id="chat-new" class="icon-btn" title="New chat" aria-label="New chat" data-icon="plus" data-size="15"></button>
+          <button id="chat-hide" class="icon-btn" title="Hide the chat (H)" aria-label="Hide the chat" data-icon="panel" data-size="15"></button>
+        </div>
       </div>
       <div id="chat-messages">
         <div id="chat-welcome">
-          <div class="chat-welcome-title">What should we build?</div>
+          <div class="chat-welcome-title">What are we building?</div>
           <div class="chat-suggestions">
             <button class="chat-suggest" data-ask="Build a small house with a red roof, a door and two windows." data-icon="house" data-size="15"><span>A small house</span></button>
             <button class="chat-suggest" data-ask="Build a red racing car." data-icon="car" data-size="15"><span>A racing car</span></button>

@@ -7,6 +7,7 @@ import { PART } from '../core/parts.ts'
 import { subsFor } from './geometry.ts'
 
 const SIZE = 112
+const HIDDEN_SIZE = 84
 
 let renderer: THREE.WebGLRenderer | null = null
 let scene: THREE.Scene
@@ -53,9 +54,9 @@ export function drawThumb(target: HTMLCanvasElement, part: string, colorId: stri
   renderer!.render(scene, camera)
 
   const ratio = window.devicePixelRatio || 1
-  const css = target.clientWidth || target.width
+  const css = target.clientWidth || HIDDEN_SIZE // a closed category has no size of its own yet
   const pixels = Math.round(css * Math.min(ratio, 2))
-  if (target.width !== pixels) { target.width = pixels; target.height = pixels }
+  if (target.width !== pixels || target.height !== pixels) { target.width = pixels; target.height = pixels }
   const g = target.getContext('2d')!
   g.clearRect(0, 0, pixels, pixels)
   g.imageSmoothingQuality = 'high'

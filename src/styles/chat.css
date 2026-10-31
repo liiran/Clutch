@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   background: var(--shell);
-  border-left: 1px solid var(--line);
+  border-radius: var(--radius);
   flex-shrink: 0;
   overflow: hidden;
   font-size: 13px;
@@ -21,6 +21,7 @@
   flex-shrink: 0;
 }
 .chat-status { font-size: 11.5px; color: var(--ink-3); min-width: 0; }
+.chat-header-btns { display: flex; gap: 2px; flex-shrink: 0; }
 .chat-status.bad { color: #b45309; }
 
 #chat-messages {
@@ -220,5 +221,5 @@
 #chat-send.is-stop { background: var(--ink); color: #fff; }
 
 @media (max-width: 1024px) {
-  #chat { width: 100%; height: 30vh; border-left: none; border-top: 1px solid var(--line); }
+  #chat { width: 100%; height: 30vh; }
 }

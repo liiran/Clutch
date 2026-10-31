@@ -3,7 +3,7 @@
 **Build with bricks in your browser. Describe what you want, check the preview, and watch it snap together.**
 
 <p align="center">
-  <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed, a request for a small house appears as a translucent preview that is dragged to a new spot and drops into place when applied, a second request adds a path, trees and a fence, and then the Replay button plays the model going together." width="800">
+  <img src="docs/media/demo.gif" alt="Clutch building a house from a chat message: the title drops onto the baseplate, the Start building button is pressed and the last brick clicks into place, a request for a small house appears as a translucent preview that is dragged to a new spot and drops into place when applied, a second request adds a path, trees and a fence, and then the Replay button plays the model going together." width="800">
 </p>
 
 <p align="center"><em>A real recording: one request builds a house, a second adds a garden to it, and Replay plays it back. <a href="docs/media/demo.mp4">Sharper video (MP4)</a>.</em></p>
@@ -23,7 +23,7 @@ Clutch only runs on your own computer for now.
 
 ## Ask the chat to build
 
-Type what you want. Your request shows up as a see-through preview, so nothing changes until you press **Apply**. **Discard** throws it away.
+Type what you want. Press H to hide the chat when you want more room. Your request shows up as a see-through preview, so nothing changes until you press **Apply**. **Discard** throws it away.
 
 <p align="center">
   <img src="docs/media/preview.png" alt="A translucent preview of a white house with a red roof on a green baseplate. The chat panel on the right shows the request, the reply, a green Checked card reading all attached, nothing overlapping, and a bar with Discard and Apply buttons." width="760">
@@ -55,6 +55,7 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 | Alt + click | Pick up a part and its colour |
 | G, C | Move or copy the selected piece |
 | Delete | Delete the selected piece |
+| H | Hide or show the chat |
 | Esc | Stop, or deselect |
 | F | Frame the build |
 | Ctrl+Z, Ctrl+Y | Undo, redo |
@@ -63,17 +64,19 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 
 ## Watch it go together
 
-**Replay** plays your model from the baseplate up, step by step, like the pages of an instruction booklet. You can pause, step through or change the speed. The **Parts** tab lists every piece you need and every step.
+**Replay** plays your model from the baseplate up, step by step, like the pages of an instruction booklet. You can pause, step through or change the speed. **Parts list** shows every piece you need and every step.
 
 <p align="center">
   <img src="docs/media/replay.png" alt="The house partway through a replay, with the roof not yet on and the walls half built. A bar along the bottom shows step 9 of 23, the pieces in this step, a slider and speed control." width="49%">
-  <img src="docs/media/parts.png" alt="The Parts tab: a list of pieces with pictures and counts on the left, and numbered build steps on the right." width="49%">
+  <img src="docs/media/parts.png" alt="The Parts list: pieces with pictures and counts on the left, and numbered build steps on the right." width="49%">
 </p>
 
 ## Keep your work
 
-- **Autosave:** builds save by themselves in this browser. **Open** shows your latest 24.
-- **Download:** saves a `.clutch` file you can keep or move to another computer. Open it again with **Open → Open a file…**.
+Everything here is under **My builds**.
+
+- **Autosave:** builds save by themselves in this browser. **Saved builds** shows your latest 24.
+- **Download:** saves a `.clutch` file you can keep or move to another computer. Open it again with **Saved builds → Open a file…**.
 - **Share:** copies a link with the whole build packed inside it, and nothing is uploaded. While Clutch runs locally, the link only works on your own computer, so use Download to give a build to someone else.
 
 ## The chat and what it costs
