@@ -61,6 +61,22 @@ export function findClaude(): string {
   return 'claude'
 }
 
+// Whether Claude Code is installed and signed in. This reads local state and makes no AI call.
+// A version that cannot answer the question counts as ready, and a real problem still shows
+// up when a message is sent.
+export function checkClaude(options: ClaudeOptions = {}): Promise<'ready' | 'missing' | 'signed-out'> {
+  return new Promise((resolve) => {
+    execFile(options.bin || findClaude(), [...(options.binArgs ?? []), 'auth', 'status', '--json'], { cwd: workdir(), windowsHide: true, timeout: 15000 }, (error, stdout) => {
+      if (error?.code === 'ENOENT') { resolve('missing'); return }
+      try {
+        resolve(JSON.parse(stdout).loggedIn === false ? 'signed-out' : 'ready')
+      } catch {
+        resolve('ready')
+      }
+    })
+  })
+}
+
 export async function askClaude(request: ClaudeRequest, options: ClaudeOptions = {}): Promise<unknown> {
   const args = [
     '-p', '--output-format', 'json',
@@ -102,9 +118,9 @@ function run(command: string, args: string[], input: string, signal?: AbortSigna
 
 function explain(error: ExecFileException, output: string): Error {
   if (error.name === 'AbortError') return new Error('aborted')
-  if (error.code === 'ENOENT') return new ClaudeUnavailableError('The chat needs Claude Code on this computer. Install it, sign in, and restart the server.')
+  if (error.code === 'ENOENT') return new ClaudeUnavailableError('The chat is not connected. Install Claude Code and sign in, or add an API key to .env.local and restart the server.')
   if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') return new Error('Claude Code returned too much output.')
   const detail = output.trim().slice(0, 400)
-  if (/log ?in|auth|credential/i.test(detail)) return new ClaudeUnavailableError('Claude Code is not signed in. Run claude in a terminal, sign in, and try again.')
+  if (/log ?in|auth|credential/i.test(detail)) return new ClaudeUnavailableError('Claude Code is not signed in. Run claude in a terminal and sign in, or add an API key to .env.local and restart the server.')
   return new Error(`Claude Code exited with code ${error.code}: ${detail}`)
 }

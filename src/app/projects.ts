@@ -14,6 +14,7 @@ const LAST = 'clutch_last'
 const SHARE = '#build=v1.'
 const MAX_PROJECTS = 24
 const MAX_LINK = 64000
+const MAX_FILE = 5 * 1024 * 1024 // far above the largest real build, which is well under 1 MB
 const THUMB_EVERY = 12000 // ms between refreshing a saved build's picture
 
 interface Saved {
@@ -273,6 +274,10 @@ export class Projects {
     input.onchange = async () => {
       const file = input.files?.[0]
       if (!file) return
+      if (file.size > MAX_FILE) {
+        this.onHint('That file is too large to be a Clutch build.', 4000)
+        return
+      }
       try {
         this.openBuild(fromFile(JSON.parse(await file.text())), null)
       } catch (error) {

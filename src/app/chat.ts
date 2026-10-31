@@ -109,7 +109,7 @@ export class Chat {
       el.textContent = !status.ready ? status.error : status.usingKey ? `Model: ${status.model} on your API key` : `Model: ${status.model} on this computer`
       el.classList.toggle('bad', !status.ready)
     } catch {
-      el.textContent = 'The chat needs the local server. Run npm run dev.'
+      el.textContent = 'Not connected: the local server is not running'
       el.classList.add('bad')
     }
   }

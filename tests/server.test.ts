@@ -264,6 +264,37 @@ test('a CLI reply with usage is logged, so its cost can be compared', async () =
   assert.match(lines[0], /CLI sonnet: 40 tokens in, 90 out, about \$0\.012/)
 })
 
+test('the status says whether the chat can run, and does not ask a model to find out', async () => {
+  const status = async (options: ApiOptions) => {
+    let result: Record<string, unknown> = {}
+    await withServer(options, async (url) => { result = await (await fetch(`${url}/api/clutch/status`)).json() })
+    return result
+  }
+  // Fails the test if the check ever does more than ask about the sign-in.
+  const only = `if (process.argv.slice(2).join(' ') !== 'auth status --json') process.exit(9);`
+  const signedIn = await status({ ...fakeCli(`${only} console.log(JSON.stringify({ loggedIn: true }))`), model: 'sonnet' })
+  assert.deepEqual([signedIn.ready, signedIn.model, signedIn.usingKey], [true, 'Sonnet 5.5', false])
+  const signedOut = await status(fakeCli(`${only} console.log(JSON.stringify({ loggedIn: false })); process.exit(1)`))
+  assert.equal(signedOut.ready, false)
+  assert.match(String(signedOut.error), /^Not connected: sign in to Claude Code or add an API key/)
+  const missing = await status({ bin: join(tmpdir(), 'no-such-program-here') })
+  assert.equal(missing.ready, false)
+  assert.match(String(missing.error), /^Not connected: install Claude Code or add an API key/)
+  const withKey = await status({ apiKey: 'test-key', bin: join(tmpdir(), 'no-such-program-here') })
+  assert.deepEqual([withKey.ready, withKey.usingKey], [true, true])
+  // A version without the command is not treated as a problem.
+  const older = await status(fakeCli(`console.error('unknown command'); process.exit(1)`))
+  assert.equal(older.ready, true)
+})
+
+test('the address for opening files in an editor is closed, from anywhere', async () => {
+  await withServer({ ask: async () => good }, async (url) => {
+    assert.equal((await fetch(`${url}/__open-in-editor?file=package.json`)).status, 403)
+    assert.equal((await fetch(`${url}/__open-in-editor`, { headers: { Origin: 'https://evil.example' } })).status, 403)
+    assert.equal((await fetch(`${url}/nothing`)).status, 404, 'other addresses pass through')
+  })
+})
+
 function fakeCli(script: string) {
   const dir = mkdtempSync(join(tmpdir(), 'clutch-fake-'))
   const file = join(dir, 'fake.mjs')

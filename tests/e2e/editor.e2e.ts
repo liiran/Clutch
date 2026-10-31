@@ -2,6 +2,9 @@
 
 import { after, before, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { Browser } from 'puppeteer-core'
 import { launch, open, shot, wait, type OpenPage } from './harness.ts'
 
@@ -491,6 +494,28 @@ test('clear asks first, and undo brings it back', async () => {
   assert.equal((await state()).count, 0)
   await page.click('#undo')
   assert.equal((await state()).count, 1)
+})
+
+test('a .clutch file opens, and one over 5 MB is refused before it is read', async () => {
+  await reset()
+  const dir = mkdtempSync(join(tmpdir(), 'clutch-files-'))
+  const small = join(dir, 'small.clutch'), big = join(dir, 'big.clutch')
+  writeFileSync(small, JSON.stringify({ version: 2, name: 'From a file', baseplate: 'green', bricks: [['brick_2x4', 'red', 3, 0, 3, 0]] }))
+  writeFileSync(big, 'x'.repeat(5 * 1024 * 1024 + 1))
+  const choose = async (file: string) => {
+    await openBuilds()
+    await wait(100)
+    const [chooser] = await Promise.all([page.waitForFileChooser(), page.click('[data-do="file"]')])
+    await chooser.accept([file])
+    await wait(300)
+  }
+  await choose(big)
+  assert.match(await page.$eval('#hint-text', (el) => el.textContent ?? ''), /too large/)
+  assert.equal((await state()).count, 0)
+  await choose(small)
+  const after = await state()
+  assert.deepEqual([after.count, after.name], [1, 'From a file'])
+  rmSync(dir, { recursive: true })
 })
 
 test('the chat can be hidden and comes back, including for a preview', async () => {

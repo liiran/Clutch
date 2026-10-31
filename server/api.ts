@@ -7,7 +7,7 @@ import { MAX_PIECES, isRot, type Brick } from '../src/core/model.ts'
 import { COLOR } from '../src/core/colors.ts'
 import { PART } from '../src/core/parts.ts'
 import { MODELS, askAnthropic } from './anthropic-api.ts'
-import { askClaude, findClaude, type ClaudeOptions } from './claude-cli.ts'
+import { askClaude, checkClaude, type ClaudeOptions } from './claude-cli.ts'
 import { SCHEMA, SYSTEM } from './prompt.ts'
 
 export type Ask = (prompt: string, signal: AbortSignal) => Promise<unknown>
@@ -157,6 +157,9 @@ export function createApi(given: ApiOptions = {}) {
   const chat = createChatHandler(options)
   return async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
     const path = request.url?.split('?')[0]
+    // Vite's address for opening a file in your editor, which only its error screen uses. It has
+    // no check on who is asking, so any website could use it while the server is running.
+    if (path === '/__open-in-editor') { json(response, 403, { error: 'Not available.' }); return }
     if (path !== '/api/clutch/chat' && path !== '/api/clutch/status') { next(); return }
     // Only this machine's own editor may use the signed-in CLI or the API key.
     if (!/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(request.headers.host ?? '')) { json(response, 403, { error: 'Use the local address to reach Clutch.' }); return }
@@ -164,8 +167,13 @@ export function createApi(given: ApiOptions = {}) {
     if (origin && origin !== `http://${request.headers.host}`) { json(response, 403, { error: 'Only this editor can use the chat.' }); return }
     if (path === '/api/clutch/chat') { await chat(request, response); return }
     const model = options.model || 'sonnet'
-    const ready = Boolean(options.ask || options.apiKey) || options.bin !== undefined || findClaude() !== 'claude' || process.platform !== 'win32'
-    json(response, 200, { ready, model: modelLabel(answered || model), usingKey: Boolean(options.apiKey), error: 'The chat needs Claude Code on this computer, or an API key in .env.local.' })
+    const setup = options.ask || options.apiKey ? 'ready' : await checkClaude(options)
+    json(response, 200, {
+      ready: setup === 'ready',
+      model: modelLabel(answered || model),
+      usingKey: Boolean(options.apiKey),
+      error: setup === 'signed-out' ? 'Not connected: sign in to Claude Code or add an API key' : 'Not connected: install Claude Code or add an API key',
+    })
   }
 }
 
