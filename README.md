@@ -28,7 +28,7 @@ Building by hand works straight away. The chat needs one of these:
 - **Claude Code:** install [Claude Code](https://claude.com/claude-code) and sign in. There is nothing else to set up. With a Claude subscription, messages count toward your plan's usage limits.
 - **An Anthropic API key:** copy `.env.example` to `.env.local`, set `ANTHROPIC_API_KEY`, and restart. The key stays on your computer. Each message is billed to your API account, so set a spend limit in the [Claude Console](https://console.anthropic.com).
 
-If a key is set, the chat uses it instead of Claude Code. The top of the chat panel shows which model and connection are in use.
+If a key is set, the chat uses it instead of Claude Code. The top of the chat panel shows which model and connection are in use, or "Not connected" if it has neither.
 
 The chat uses Sonnet unless you set `CLUTCH_CLAUDE_MODEL` in `.env.local`. You can use `haiku` (cheapest), `sonnet`, `opus`, or a full model name. See `.env.example` for the other settings.
 
@@ -60,16 +60,16 @@ Pick a part and a colour on the left, then click the baseplate. A ghost shows wh
 
 | Input | What it does |
 |---|---|
-| Left drag, right drag, scroll | Orbit, pan, zoom |
-| V, B, P, E | Select, Place, Paint, Erase |
+| Left drag / right drag / scroll | Orbit / pan / zoom |
+| V / B / P / E | Select / Place / Paint / Erase |
 | R | Rotate |
 | Alt + click | Pick up a part and its colour |
-| G, C | Move or copy the selected piece |
+| G / C | Move / copy the selected piece |
 | Delete | Delete the selected piece |
 | H | Hide or show the chat |
 | F | Frame the build |
 | Esc | Stop, or deselect |
-| Ctrl+Z, Ctrl+Y | Undo, redo |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
 | ? | Show these in the app |
 
 ## Replay and parts
@@ -98,10 +98,35 @@ Builds save by themselves in your browser. **My builds** has the rest:
 
 ## How it works
 
-1. Your request and the current build go to a small local server (`server/api.ts`).
-2. It asks Claude, through Claude Code (`server/claude-cli.ts`) or your API key (`server/anthropic-api.ts`). Claude has no tools, so it cannot touch your files. It can only return a list of build actions.
-3. The server checks those actions against the rules (`src/core/actions.ts`) and sends any problems back once to be fixed.
-4. Your browser shows the result as a preview, ready to apply or discard.
+```
+        "Build a small house with a red roof"
+                        |
+                        v
+             +---------------------+
+             |     Local server    |   the request, the build as text,
+             |  server/api.ts      |   and the earlier chat
+             +---------------------+
+                        |
+                        v
+             +---------------------+
+             |  Claude Code or API |   no tools, and the reply must match
+             |  server/claude-cli  |   a JSON schema of actions
+             |  server/anthropic-  |
+             |  api                |
+             +---------------------+
+                        |
+                        v
+             +---------------------+
+             |    Check the build  |   collisions and floating pieces go
+             |  core/actions.ts    |   back to the model once, in detail
+             +---------------------+
+                        |
+                        v
+             +---------------------+
+             |    Ghost preview    |   the same actions run again in the browser,
+             |  Apply or Discard   |   so what was checked is what gets built
+             +---------------------+
+```
 
 ```
 src/core/      the rules, shared by the browser and the server
