@@ -106,7 +106,7 @@ export class Chat {
     const el = document.getElementById('chat-status')!
     try {
       const status = await (await fetch('/api/clutch/status')).json()
-      el.textContent = !status.ready ? status.error : status.usingKey ? `${status.model} on your API key` : `${status.model} on this computer`
+      el.textContent = !status.ready ? status.error : status.usingKey ? `Model: ${status.model} on your API key` : `Model: ${status.model} on this computer`
       el.classList.toggle('bad', !status.ready)
     } catch {
       el.textContent = 'The chat needs the local server. Run npm run dev.'

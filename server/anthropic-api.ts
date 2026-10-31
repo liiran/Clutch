@@ -31,7 +31,7 @@ export function logUsage(source: string, input: number, output: number, cost: nu
 function explain(error: unknown): Error {
   if (error instanceof Anthropic.APIUserAbortError) return new Error('aborted')
   if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) {
-    return new ClaudeUnavailableError('The API key was rejected. Check CLUTCH_API_KEY in .env.local and restart the server.')
+    return new ClaudeUnavailableError('The API key was rejected. Check ANTHROPIC_API_KEY in .env.local and restart the server.')
   }
   if (error instanceof Anthropic.RateLimitError) return new ClaudeUnavailableError('The API key has reached its rate limit. Wait a moment and try again.')
   if (error instanceof Anthropic.APIError && /credit balance/i.test(error.message)) {
