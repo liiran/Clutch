@@ -10,30 +10,41 @@
 
 ## Start it
 
-You need [Node.js](https://nodejs.org) 22 or newer. The chat also needs either [Claude Code](https://claude.com/claude-code) signed in on your computer, or your own [API key](#the-chat-and-what-it-costs).
+You need [Node.js](https://nodejs.org) 22.6 or newer.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open **http://127.0.0.1:5173/** in your browser. On Windows, you can double-click `start-local.bat` instead, which installs what is missing and opens the page for you.
+Then open **http://127.0.0.1:5173/**. On Windows, you can double-click `start-local.bat` instead, which does all of this for you.
 
-Clutch only runs on your own computer for now.
+Clutch runs only on your own computer.
+
+## Connect the chat
+
+Building by hand works straight away. The chat needs one of these:
+
+- **Claude Code:** install [Claude Code](https://claude.com/claude-code) and sign in. There is nothing else to set up. With a Claude subscription, messages count toward your plan's usage limits.
+- **An Anthropic API key:** copy `.env.example` to `.env.local`, set `ANTHROPIC_API_KEY`, and restart. The key stays on your computer. Each message is billed to your API account, so set a spend limit in the [Claude Console](https://console.anthropic.com).
+
+If a key is set, the chat uses it instead of Claude Code. The top of the chat panel shows which model and connection are in use.
+
+The chat uses Sonnet unless you set `CLUTCH_CLAUDE_MODEL` in `.env.local`. You can use `haiku` (cheapest), `sonnet`, `opus`, or a full model name. See `.env.example` for the other settings.
 
 ## Ask the chat to build
 
-Type what you want. Press H or the Chat button to hide the chat when you want more room. Your request shows up as a see-through preview, so nothing changes until you press **Apply**. **Discard** throws it away.
+Type what you want. It appears as a see-through preview, and nothing changes until you press **Apply**.
 
 <p align="center">
   <img src="docs/media/preview.png" alt="A translucent preview of a white house with a red roof on a green baseplate. The chat panel on the right shows the request, the reply, a green Checked card reading all attached, nothing overlapping, and a bar with Discard and Apply buttons." width="760">
 </p>
 
-Don't like where it landed? Drag the preview anywhere on the baseplate, press R to turn it, or nudge it with the arrow keys. It stays on the plate, turns red where it doesn't fit, and can only be applied where it does.
+Drag the preview to move it, or press R to turn it. It turns red where it doesn't fit.
 
-Before you see a preview, every piece is checked: nothing can overlap, and every piece has to connect through studs back to the baseplate. If there is a problem, the model gets exactly one chance to fix it. The green card tells you how it went, and a yellow one says what is still wrong.
+Every piece is checked before you see it: nothing can overlap, and every piece has to connect back to the baseplate. If there is a problem, the model gets one chance to fix it. The card in the chat tells you how it went.
 
-Then keep going. The chat always sees the current build, so you can add to it, change colours or take things away.
+Then keep going. The chat sees your current build, so you can add to it, change colours or take things away.
 
 <p align="center">
   <img src="docs/media/garden.png" alt="The finished build seen from the front: a white house with a red roof and door, two windows, a tree on each side, a sand path and a white fence with a gap for the path. The chat panel shows both requests and their replies." width="760">
@@ -41,7 +52,7 @@ Then keep going. The chat always sees the current build, so you can add to it, c
 
 ## Or build by hand
 
-Pick a part on the left, pick a colour, and click the baseplate. A ghost shows where the piece will land, and pieces stack on whatever is under the pointer.
+Pick a part and a colour on the left, then click the baseplate. A ghost shows where the piece will land.
 
 <p align="center">
   <img src="docs/media/by-hand.gif" alt="Picking a blue brick and placing two on the baseplate, then stacking yellow bricks and red slopes on top, then painting one piece white and selecting another." width="760">
@@ -49,22 +60,21 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 
 | Input | What it does |
 |---|---|
-| Left drag / right drag / scroll | Orbit / pan / zoom |
+| Left drag, right drag, scroll | Orbit, pan, zoom |
 | V, B, P, E | Select, Place, Paint, Erase |
 | R | Rotate |
 | Alt + click | Pick up a part and its colour |
 | G, C | Move or copy the selected piece |
 | Delete | Delete the selected piece |
 | H | Hide or show the chat |
-| Esc | Stop, or deselect |
 | F | Frame the build |
+| Esc | Stop, or deselect |
 | Ctrl+Z, Ctrl+Y | Undo, redo |
-| Drag a preview | Move a chat build before applying it (R turns it, arrow keys nudge it) |
 | ? | Show these in the app |
 
-## Watch it go together
+## Replay and parts
 
-**Replay** plays your model from the baseplate up, step by step, like the pages of an instruction booklet. You can pause, step through or change the speed. **Parts list** shows every piece you need and every step.
+**Replay** plays your model from the baseplate up, step by step, like an instruction booklet. **Parts list** shows every piece and every step.
 
 <p align="center">
   <img src="docs/media/replay.png" alt="The house partway through a replay, with the roof not yet on and the walls half built. A bar along the bottom shows step 9 of 23, the pieces in this step, a slider and speed control." width="49%">
@@ -73,106 +83,48 @@ Pick a part on the left, pick a colour, and click the baseplate. A ghost shows w
 
 ## Keep your work
 
-Everything here is under **My builds**.
+Builds save by themselves in your browser. **My builds** has the rest:
 
-- **Autosave:** builds save by themselves in this browser. **Saved builds** shows your latest 24.
-- **Download:** saves a `.clutch` file you can keep or move to another computer. Open it again with **Saved builds → Open a file…**.
-- **Share:** copies a link with the whole build packed inside it, and nothing is uploaded. While Clutch runs locally, the link only works on your own computer, so use Download to give a build to someone else.
-
-## The chat and what it costs
-
-The chat can run two ways, using Claude Sonnet by default. Everything else, including building by hand and Replay, makes no AI calls at all.
-
-- **Claude Code (the default):** it runs through the CLI signed in on your computer, with nothing to set up. With a Claude subscription, each message counts toward your plan's usage limits rather than being billed separately.
-- **Your own API key:** put an Anthropic API key in `.env.local` and the chat uses it instead, with no need for Claude Code. The key stays on the local server and never reaches the browser. Each request is billed to your API account, which a Claude subscription does not cover, so set a spend limit in the [Claude Console](https://console.anthropic.com).
-
-The chat panel shows which one is in use, and the server's log shows the tokens and approximate cost of each request. Either way, the model can only return build instructions: it has no tools, so it cannot touch your files or run commands.
-
-To set these, copy `.env.example` to `.env.local` and restart the server:
-
-| Setting | Effect |
-|---|---|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key. Leave it empty to use Claude Code. Clutch also picks this up if it is set across your whole computer. Only Anthropic keys work for now. |
-| `CLUTCH_CLAUDE_MODEL` | `sonnet` by default. `haiku` is the cheapest and `opus` the strongest, or use a full name, such as `claude-sonnet-4-6`, to pin one. With Claude Code, these short names follow the newest version. With an API key, they mean the version named in `server/anthropic-api.ts`, so your costs don't change by surprise. |
-| `CLUTCH_CLAUDE_EFFORT` | `medium` by default. Higher builds better and takes longer. |
-| `CLUTCH_CLAUDE_BIN` | The path to `claude`, if it cannot be found automatically. |
+- **Saved builds:** your latest 24.
+- **Download:** a `.clutch` file you can keep or move to another computer.
+- **Share:** copies a link with the whole build inside it. It only works where Clutch is running, so use Download to send a build to someone else.
 
 ## The rules
 
-- The baseplate is 64 × 64 studs, and builds can reach 32 bricks tall with up to 3000 pieces. One chat reply can add up to 1500.
+- The baseplate is 64 × 64 studs, and builds can reach 32 bricks tall with up to 3000 pieces.
+- There are 44 parts in 22 colours.
 - Pieces sit on a stud grid and turn in quarter turns. They cannot overlap.
-- There are 44 parts: bricks, plates, tiles, slopes, round parts, arches, windows, doors, fences, wheels and flowers, in 22 colours.
-- A piece is attached when it grips a stud, in a chain back to the baseplate. By hand, a piece with nothing to grip is allowed and flagged, and the chat has to fix them.
+- By hand, a piece with nothing to grip is allowed and flagged.
 
 ## How it works
 
-```
-        "Build a small house with a red roof"
-                        |
-                        v
-             +---------------------+
-             |     Local server    |   the request, the build as text,
-             |  server/api.ts      |   and the earlier chat
-             +---------------------+
-                        |
-                        v
-             +---------------------+
-             |  Claude Code or API |   no tools, and the reply must match
-             |  server/claude-cli  |   a JSON schema of actions
-             |  server/anthropic-  |
-             |  api                |
-             +---------------------+
-                        |
-                        v
-             +---------------------+
-             |    Check the build  |   collisions and floating pieces go
-             |  core/actions.ts    |   back to the model once, in detail
-             +---------------------+
-                        |
-                        v
-             +---------------------+
-             |    Ghost preview    |   the same actions run again in the browser,
-             |  Apply or Discard   |   so what was checked is what gets built
-             +---------------------+
-```
-
-The model works in big actions (`walls`, `fill`, `roof`, `voxels`) and exact ones (`place`). The big actions lay real pieces with staggered joints, so a whole house is a few lines. Every action runs against the same rules as a piece placed by hand.
-
-Clutch is built to stay light, even on a weak computer:
-
-| What | How |
-|---|---|
-| Language | TypeScript and Three.js, with no UI framework |
-| Pieces | One instanced mesh per part, so a large build is a few dozen draw calls |
-| Baseplate | Its studs are a painted texture: two triangles instead of over 100,000 |
-| Pointer | A ray walked through the occupancy grid, so hovering does not slow down as a build grows |
-| Drawing | Only when something changed, so an idle page draws nothing |
-| Slow devices | Quality steps down by itself when drawing falls behind, and remembers for next time |
+1. Your request and the current build go to a small local server (`server/api.ts`).
+2. It asks Claude, through Claude Code (`server/claude-cli.ts`) or your API key (`server/anthropic-api.ts`). Claude has no tools, so it cannot touch your files. It can only return a list of build actions.
+3. The server checks those actions against the rules (`src/core/actions.ts`) and sends any problems back once to be fixed.
+4. Your browser shows the result as a preview, ready to apply or discard.
 
 ```
-src/core/      the rules, with no browser code; the server runs them too
-  parts.ts       the catalogue: footprints, studs, what grips
-  grid.ts        occupancy, collisions, the attachment check
-  actions.ts     what a list of chat actions builds
-  tiling.ts      turns cells into real pieces, with staggered joints
-  steps.ts       build order and the parts list
-src/render/    Three.js: the stage, generated models, instancing, sound, thumbnails
-src/app/       the editor: store, tools, sidebar, chat, replay, projects, landing
-server/        the local chat API, the CLI and API key adapters, and the prompt
-tests/         unit and server tests; e2e/ drives the real editor in Chrome
-bench/         real requests through the real chat, and the README's recordings
+src/core/      the rules, shared by the browser and the server
+src/render/    the 3D scene: models, drawing, sound and part pictures
+src/app/       the editor: tools, parts menu, chat, replay, saving and the opening
+src/styles/    the look
+server/        the local server, the two Claude connections and the prompt
+tests/         automated tests, including the real editor in Chrome
+bench/         real test requests, and the recordings in this file
 ```
+
+Clutch is built to stay light on a weak computer. It draws only when something changes, and lowers its quality by itself if drawing falls behind.
 
 ## Development
 
 ```bash
-npm test            # the rules, the server and both chat adapters
+npm test            # the rules, the server and both Claude connections
 npm run test:e2e    # the real editor in Chrome (needs npm run dev running)
-npm run perf        # frame times on a 3000 piece build
-npm run landing     # what the landing page costs (CLUTCH_SOFTWARE=1 for no GPU)
-npm run bench       # real prompts through the real model, with pictures
-npm run media       # re-records the pictures and videos here (needs ffmpeg)
 npm run build       # type checks and a production build
+npm run perf        # frame times on a 3000 piece build
+npm run landing     # what the opening costs (CLUTCH_SOFTWARE=1 for no GPU)
+npm run bench       # real prompts through the real model
+npm run media       # re-records the pictures and videos here (needs ffmpeg)
 ```
 
 `npm run bench` and `npm run media` send real chat messages. The other commands make no AI calls.
