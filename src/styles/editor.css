@@ -278,8 +278,8 @@ button:disabled { cursor: default; }
 }
 #sidebar > * { transition: opacity 0.18s; }
 #sidebar.is-locked { pointer-events: none; }
-#sidebar.is-locked > * { opacity: 0.4; }
-html.entering #sidebar.is-locked > * { opacity: 1; }
+#sidebar.is-locked > :not(.brand) { opacity: 0.4; }
+html.entering #sidebar.is-locked > :not(.brand) { opacity: 1; }
 
 .search { position: relative; padding: 8px 10px; flex-shrink: 0; }
 .search-icon { position: absolute; left: 20px; top: 17px; color: var(--ink-3); display: flex; pointer-events: none; }
