@@ -180,7 +180,8 @@ partsView.onOpenStep = (index) => {
 }
 
 // ── Replay ─────────────────────────────────────────────────────
-const lockWhile = () => tools.setLocked(replay.active || chat.isPreviewing)
+let cleanView = false
+const lockWhile = () => tools.setLocked(replay.active || chat.isPreviewing || cleanView)
 replay.onChange = () => {
   lockWhile()
   root.classList.toggle('is-replaying', replay.active)
@@ -200,6 +201,7 @@ chat.onAsk = () => {
 }
 chat.onPreviewChange = (open) => {
   if (open) {
+    setCleanView(false)
     showView('build')
     void setChatHidden(false) // Apply and Discard are in the chat
   }
@@ -268,7 +270,7 @@ async function setChatHidden(hidden: boolean) {
 }
 markChat(chatWanted)
 const toggleChat = () => {
-  if (!chat.isPreviewing) void setChatHidden(!chatWanted)
+  if (!chat.isPreviewing && !cleanView) void setChatHidden(!chatWanted)
 }
 $('chat-hide').addEventListener('click', toggleChat)
 $('chat-toggle').addEventListener('click', toggleChat)
@@ -314,12 +316,49 @@ $('help-btn').addEventListener('click', () => { helpCard.hidden = !helpCard.hidd
 document.addEventListener('pointerdown', (event) => {
   if (!(event.target as HTMLElement).closest('#help, #help-btn')) helpCard.hidden = true
 })
+
+// ── Clean view, for screenshots ────────────────────────────────
+// Only the build is left on screen. The camera still works, and the tools are locked so
+// nothing gets a highlight or a ghost.
+const cleanExit = $('clean-exit')
+let cleanTimer = 0
+function setCleanView(on: boolean) {
+  if (on === cleanView) return
+  if (on) {
+    if (chat.isPreviewing) { setHint('Apply or discard the preview first', 2400); return }
+    if (chatSliding) return
+    tools.cancelLift()
+    replay.stop()
+    helpCard.hidden = true
+    baseMenu.hidden = true
+    showBuildsMenu(false)
+  }
+  cleanView = on
+  root.classList.toggle('clean', on)
+  lockWhile()
+  refreshCounts()
+  window.clearTimeout(cleanTimer)
+  cleanExit.classList.toggle('is-showing', on)
+  if (on) cleanTimer = window.setTimeout(() => cleanExit.classList.remove('is-showing'), 3000)
+}
+$('clean-btn').addEventListener('click', () => setCleanView(true))
+cleanExit.addEventListener('click', () => setCleanView(false))
+
 document.addEventListener('keydown', (event) => {
   const el = document.activeElement as HTMLElement | null
   if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+  const plain = !event.ctrlKey && !event.metaKey && !event.altKey
+  const key = event.key.toLowerCase()
+  if (cleanView) {
+    if (key === 'escape' || (key === 'u' && plain)) setCleanView(false)
+    return
+  }
   if (event.key === '?') helpCard.hidden = !helpCard.hidden
   if (event.key === 'Escape') { helpCard.hidden = true; showBuildsMenu(false) }
-  if (event.key.toLowerCase() === 'h' && !event.ctrlKey && !event.metaKey && !event.altKey && !root.classList.contains('scene')) toggleChat()
+  if (!plain || root.classList.contains('scene')) return
+  if (key === 'h') toggleChat()
+  const free = !root.classList.contains('entering') && $('parts-view').hidden && !document.querySelector('dialog[open]')
+  if (key === 'u' && free) setCleanView(true)
 })
 
 // ── Clearing ───────────────────────────────────────────────────

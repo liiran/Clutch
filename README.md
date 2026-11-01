@@ -10,8 +10,6 @@
 
 ## Start it
 
-You need [Node.js](https://nodejs.org) 22.6 or newer.
-
 ```bash
 npm install
 npm run dev
@@ -67,6 +65,7 @@ Pick a part and a colour on the left, then click the baseplate. A ghost shows wh
 | G / C | Move / copy the selected piece |
 | Delete | Delete the selected piece |
 | H | Hide or show the chat |
+| U | Hide everything for a screenshot |
 | F | Frame the build |
 | Esc | Stop, or deselect |
 | Ctrl+Z / Ctrl+Y | Undo / redo |

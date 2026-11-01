@@ -697,6 +697,34 @@ html.scene .skip-link:focus-visible { transform: translate(-50%, 0); }
 
 html.chat-hidden #chat { display: none; }
 
+/* ── Clean view, for screenshots ──────────────── */
+/* Only the 3D view is left, filling the window. The panels stay in the page, so their
+   scroll positions are still there when they come back. */
+html.clean #sidebar, html.clean #chat { visibility: hidden; }
+html.clean #viewport { position: fixed; inset: 0; border-radius: 0; }
+html.clean #viewport > *:not(canvas):not(#clean-exit) { display: none !important; }
+/* The way back shows for a moment, then only when the pointer is over that corner. */
+#clean-exit {
+  display: none;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 8px 0 12px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+html.clean #clean-exit { display: flex; }
+#clean-exit.is-showing, #clean-exit:hover, #clean-exit:focus-visible { opacity: 1; }
+#clean-exit kbd { color: var(--glass-ink-2); background: rgba(255, 255, 255, 0.12); }
+
 /* While the chat slides, it sits over a full-width 3D view, and what is anchored to the
    view's right side or middle moves with it instead of jumping. */
 html.chat-sliding #chat { position: fixed; top: var(--gap); bottom: var(--gap); right: var(--gap); z-index: 40; box-shadow: 0 0 0 var(--gap) var(--frame); will-change: transform; }

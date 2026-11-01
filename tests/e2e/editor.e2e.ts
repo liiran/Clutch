@@ -586,6 +586,112 @@ test('the chat can be hidden and comes back, including for a preview', async () 
   assert.deepEqual((await state()).bricks.map((b) => [b.x, b.z]), [[19, 18]], 'a 2×4 centres on the pointer')
 })
 
+test('clean view leaves only the build, and everything comes back', async () => {
+  await reset()
+  const isClean = () => page.evaluate(() => document.documentElement.classList.contains('clean'))
+  // Everything on the page that is still showing, apart from the 3D view.
+  const showing = () => page.evaluate(() => ['sidebar', 'chat', 'nameplate', 'actions', 'rail', 'hint', 'empty', 'where', 'build-bar', 'dock', 'help']
+    .filter((id) => {
+      const el = document.getElementById(id)!
+      return el.checkVisibility({ visibilityProperty: true }) && !el.classList.contains('is-hidden')
+    }))
+  const canvas = () => page.evaluate(() => {
+    const rect = document.getElementById('canvas')!.getBoundingClientRect()
+    return [rect.left, rect.top, rect.width, rect.height]
+  })
+  const windowSize = () => page.evaluate(() => [0, 0, innerWidth, innerHeight])
+  const exitOpacity = () => page.$eval('#clean-exit', (el) => Number(getComputedStyle(el).opacity))
+
+  await page.click('.part-tile[title="Brick 2×4"]')
+  await clickAt(20, 20)
+  await page.keyboard.press('v')
+  await clickAt(20, 20)
+  assert.notEqual((await state()).selected, null)
+  const before = await canvas()
+
+  await page.click('#clean-btn')
+  await wait(400)
+  assert.equal(await isClean(), true)
+  assert.deepEqual(await showing(), [])
+  assert.deepEqual(await canvas(), await windowSize(), 'the build has the whole window')
+  assert.equal((await state()).selected, null, 'no selection frame in the picture')
+  assert.equal(await exitOpacity(), 1, 'it says how to get back')
+
+  // The camera works, and clicks do nothing to the build.
+  const camera = () => page.evaluate(() => (window as any).clutch.stage.camera.position.toArray())
+  const from = await camera()
+  await page.mouse.move(640, 500)
+  await page.mouse.down()
+  await page.mouse.move(720, 460, { steps: 4 })
+  await page.mouse.up()
+  await wait(200)
+  assert.notDeepEqual(await camera(), from)
+  await clickAt(20, 20)
+  assert.equal((await state()).selected, null)
+  assert.equal((await state()).count, 1)
+
+  // The way back fades, and returns over its corner.
+  await page.mouse.move(640, 500)
+  await page.evaluate(() => document.getElementById('clean-exit')!.classList.remove('is-showing'))
+  await wait(400)
+  assert.equal(await exitOpacity(), 0)
+  await page.hover('#clean-exit')
+  await wait(400)
+  assert.equal(await exitOpacity(), 1)
+  await page.click('#clean-exit')
+  await wait(100)
+  assert.equal(await isClean(), false)
+  assert.deepEqual(await canvas(), before)
+  assert.ok((await showing()).includes('actions'))
+  assert.equal((await state()).locked, false)
+
+  // By key, and it leaves the tool as it was.
+  await page.keyboard.press('b')
+  await page.keyboard.press('u')
+  await wait(100)
+  assert.equal(await isClean(), true)
+  assert.deepEqual(await showing(), [])
+  await page.keyboard.press('h')
+  await page.keyboard.press('?')
+  await page.keyboard.press('Escape')
+  await wait(100)
+  assert.equal(await isClean(), false)
+  assert.equal((await state()).mode, 'place')
+  assert.equal(await page.$eval('#help', (el) => (el as HTMLElement).hidden), true)
+  assert.notEqual(await page.$eval('#chat', (el) => getComputedStyle(el).display), 'none')
+
+  // A piece on the pointer goes back first.
+  await page.keyboard.press('v')
+  await clickAt(20, 20)
+  await page.keyboard.press('g')
+  assert.equal((await state()).count, 0)
+  await page.keyboard.press('u')
+  assert.equal((await state()).count, 1)
+  await page.keyboard.press('u')
+
+  // A preview needs its Apply and Discard: it refuses clean view, and a reply ends it.
+  const preview = () => page.evaluate(() => (window as any).clutch.chat.preview([{ tool: 'place', part: 'brick_2x4', color: 'blue', at: [[40, 0, 40]] }]))
+  await preview()
+  await wait(200)
+  await page.click('#clean-btn')
+  assert.equal(await isClean(), false)
+  await page.click('#chat-decline')
+  await wait(100)
+  await page.keyboard.press('u')
+  assert.equal(await isClean(), true)
+  await preview()
+  await wait(200)
+  assert.equal(await isClean(), false)
+  await page.click('#chat-decline')
+  await wait(100)
+
+  // Not from the Parts list, where there is nothing to show.
+  await page.click('[data-view="parts"]')
+  await page.keyboard.press('u')
+  assert.equal(await isClean(), false)
+  await page.click('[data-view="build"]')
+})
+
 test('My builds holds saved builds, download and share, and closes itself', async () => {
   await reset()
   const menuHidden = () => page.$eval('#builds-menu', (el) => (el as HTMLElement).hidden)
